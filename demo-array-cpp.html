@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<title>C++ tömbök – memória vizualizáció (vetítéshez)</title>
+
+<style>
+body{
+  margin:0;
+  background:#0b1020;
+  color:#ffffff;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+h1{
+  text-align:center;
+  margin:20px 0 10px;
+  font-size:32px;
+}
+
+.wrapper{
+  display:grid;
+  grid-template-columns: 420px 1fr;
+  gap:20px;
+  padding:20px;
+}
+
+/* ===== VEZÉRLŐK ===== */
+.panel{
+  background:#121a33;
+  border-radius:16px;
+  padding:20px;
+}
+
+.panel h2{
+  margin-top:0;
+  font-size:22px;
+}
+
+label{
+  display:block;
+  font-size:18px;
+  margin-top:14px;
+}
+
+input{
+  width:calc(100% - 25px);
+  padding:12px;
+  font-size:18px;
+  border-radius:10px;
+  border:none;
+  margin-top:6px;
+}
+
+button{
+  margin-top:14px;
+  width:100%;
+  padding:14px;
+  font-size:18px;
+  border-radius:12px;
+  border:none;
+  cursor:pointer;
+}
+
+button.primary{ background:#2b6fff; color:white; }
+button.green{ background:#27c07d; }
+button.red{ background:#ff4d6d; }
+button.gray{ background:#3a3f66; color:white; }
+
+.status{
+  margin-top:24px;
+  padding:20px;
+  border-radius:16px;
+  font-size:24px;          /* EZ A LÉNYEG */
+  font-weight:700;
+  text-align:center;
+
+  background:#101a3a;
+  color:white;
+  border:3px solid #2b6fff;
+
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+/* külön állapotok */
+.status.info{
+  background:#102a55;
+  border-color:#2b6fff;
+}
+
+.status.success{
+  background:#0f3a2a;
+  border-color:#27c07d;
+}
+
+.status.reset{
+  background:#3a1020;
+  border-color:#ff4d6d;
+}
+
+/* ===== MEMÓRIA ===== */
+.memory{
+  background:#0f1730;
+  border-radius:16px;
+  padding:20px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(10, 1fr); /* KEVESEBB OSZLOP */
+  gap:12px;
+}
+
+.cell{
+  aspect-ratio:1/1;
+  border-radius:12px;
+  border:2px solid rgba(255,255,255,0.2);
+  background:#1a1f3d;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  font-weight:600;
+}
+
+.cell.alloc{ background:#244fb8; }
+.cell.used{ background:#1e8f63; }
+.cell.active{
+  outline:4px solid #ffcc00;
+}
+
+.idx{
+  position:absolute;
+  bottom:6px;
+  right:8px;
+  font-size:14px;
+  opacity:0.8;
+}
+
+.addr{
+  position:absolute;
+  top:6px;
+  left:8px;
+  font-size:13px;
+  opacity:0.7;
+}
+
+.panel-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:16px;
+}
+
+.panel-header h2{
+  margin:0;
+}
+
+.panel-header button{
+  margin-left: 30px;
+  padding:10px 18px;
+  font-size:18px;
+}
+</style>
+</head>
+
+<body>
+<h1>C++ tömbök – memória működése</h1>
+
+<div class="wrapper">
+
+  <!-- VEZÉRLŐK -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Vezérlés</h2>
+      <button class="gray" onclick="freeArray()">Újrakezdés</button>
+    </div>
+
+    <label>Tömb mérete (N)</label>
+    <input id="n" type="number" value="6" min="0" max="50">
+
+    <button class="primary" onclick="allocate()">Memória lefoglalása</button>
+    
+
+    <label>Értékek (pl. 10,20,30)</label>
+    <input id="values" placeholder="10, 20, 30">
+
+    <button class="green" onclick="loadValues()">Értékek beírása</button>
+    <button class="gray" onclick="randomFill()">Véletlen feltöltés</button>
+
+    <label>Index megtekintése</label>
+    <input id="inspect" type="number" value="0">
+    <button class="primary" onclick="inspectIndex()">Index értéke</button>
+
+    <button class="gray" onclick="step()">Bejárás – következő</button>
+
+    <div class="status" id="status">
+      Állapot: még nincs lefoglalt tömb
+    </div>
+  </div>
+
+  <!-- MEMÓRIA -->
+  <div class="memory">
+    <div class="grid" id="grid"></div>
+  </div>
+
+</div>
+
+<script>
+const MEM_SIZE = 50;
+const BASE = 1000;
+const SIZEOF_INT = 4;
+
+let N = 0;
+let arr = [];
+let active = -1;
+
+const grid = document.getElementById("grid");
+const status = document.getElementById("status");
+
+const nInput = document.getElementById("n");
+const valuesInput = document.getElementById("values");
+const inspectInput = document.getElementById("inspect");
+
+function build(){
+  grid.innerHTML="";
+  for(let i=0;i<MEM_SIZE;i++){
+    const c=document.createElement("div");
+    c.className="cell";
+    c.innerHTML=`<div class="addr">${BASE+i*SIZEOF_INT}</div>
+                 <div class="idx">${i}</div>`;
+    grid.appendChild(c);
+  }
+}
+
+function render(){
+  [...grid.children].forEach((c,i)=>{
+    c.className="cell";
+    c.textContent="";
+
+    // cím mindig látszik
+    c.innerHTML = `<div class="addr">${BASE+i*SIZEOF_INT}</div>`;
+
+    if(i < N){
+      // lefoglalt cella
+      c.classList.add("alloc");
+
+      // index csak lefoglalt tartományban
+      c.innerHTML += `<div class="idx">${i}</div>`;
+
+      if(arr[i] !== undefined){
+        c.classList.add("used");
+        c.textContent = arr[i];
+        // visszaírjuk az addr+idx-t, mert textContent törli a belső HTML-t
+        c.innerHTML = `<div class="addr">${BASE+i*SIZEOF_INT}</div>${arr[i]}<div class="idx">${i}</div>`;
+      }
+    }
+
+    if(i === active) c.classList.add("active");
+  });
+}
+
+function allocate(){
+  N = +nInput.value;
+  arr = new Array(N);
+  active = N > 0 ? 0 : -1;
+  setStatus(`Memória lefoglalva: N = ${N}`, "success");
+  render();
+}
+
+function freeArray(){
+  N=0;
+  arr=[];
+  active=-1;
+  setStatus("Újrakezdés – a tömb törölve, memória felszabadítva", "reset");
+  render();
+}
+
+function loadValues(){
+  const vals = valuesInput.value
+    .split(",")
+    .map(v => v.trim())
+    .filter(v => v.length)
+    .map(v => Number(v));
+
+  for(let i=0;i<Math.min(vals.length,N);i++){
+    arr[i]=vals[i];
+  }
+  setStatus("Értékek beírva a tömbbe", "success");
+  render();
+}
+
+function randomFill(){
+  for(let i=0;i<N;i++){
+    arr[i]=Math.floor(Math.random()*100);
+  }
+  status.textContent="Véletlen értékek generálva";
+  render();
+}
+
+function step(){
+  if(N===0) return;
+  active=(active+1)%N;
+  status.textContent=`Bejárás: i=${active}, a[i]=${arr[active] ?? "?"}`;
+  render();
+}
+
+function inspectIndex(){
+  const i = Number(inspectInput.value);
+
+  if(!Number.isFinite(i)){
+    status.textContent = "Hiba: az index nem szám";
+    return;
+  }
+  if(i < 0 || i >= N){
+    status.textContent = `Hiba: index kívül esik a tartományon (0..${Math.max(0,N-1)})`;
+    return;
+  }
+
+  active = i;
+  setStatus(`Indexelés: a[${i}] = ${arr[i] ?? "?"}`, "info");
+  render();
+}
+
+function setStatus(message, type="info"){
+  status.className = "status " + type;
+  status.textContent = message;
+
+  // kis vizuális "pop", hogy észrevehető legyen
+  status.style.transform = "scale(1.05)";
+  setTimeout(() => {
+    status.style.transform = "scale(1)";
+  }, 150);
+}
+
+// Gombokhoz: HTML-ben az inspect() helyett ezt hívd
+window.allocate = allocate;
+window.freeArray = freeArray;
+window.loadValues = loadValues;
+window.randomFill = randomFill;
+window.step = step;
+window.inspectIndex = inspectIndex;
+
+build();
+render();
+</script>
+
+</body>
+</html>
