@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kártyapakli</title>
+  <style>
+    :root{
+      --cardW: 150px;
+      --cardH: 210px;
+      --radius: 18px;
+      --border: 4px;
+    }
+
+    body{
+      font-family: system-ui, Arial, sans-serif;
+      margin: 28px;
+      background: #ffffff;
+      color: #111;
+    }
+
+    h1{
+      margin: 0 0 12px;
+      font-size: 34px;
+      letter-spacing: .2px;
+    }
+
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:14px;
+      align-items:center;
+      margin: 14px 0 16px;
+    }
+
+    label{
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    input[type="number"]{
+      width: 110px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 3px solid #111;
+      font-size: 18px;
+      font-weight: 700;
+      margin-left: 10px;
+    }
+
+    button{
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 3px solid #111;
+      background: #f3f3f3;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button:hover{ background:#e9e9e9; }
+
+    .status{
+      font-size: 18px;
+      font-weight: 700;
+      opacity: .92;
+      margin-bottom: 10px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(var(--cardW), 1fr));
+      gap: 18px;
+      max-width: 1400px; /* projektoron szépen kitölti */
+    }
+
+    /* flip */
+    .card{
+      width: var(--cardW);
+      height: var(--cardH);
+      perspective: 1200px;
+    }
+    .inner{
+      width:100%;
+      height:100%;
+      position:relative;
+      transform-style:preserve-3d;
+      transition: transform 0.32s ease;
+      cursor:pointer;
+      user-select:none;
+    }
+    .card.flipped .inner{ transform: rotateY(180deg); }
+
+    .face{
+      position:absolute;
+      inset:0;
+      border-radius: var(--radius);
+      backface-visibility:hidden;
+      border: var(--border) solid #111;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      padding: 12px;
+      box-sizing:border-box;
+      box-shadow: 0 6px 18px rgba(0,0,0,.12);
+    }
+
+    /* hát */
+    .back{
+      color:#fff;
+      background:
+        repeating-linear-gradient(
+          45deg,
+          #0f4a8a,
+          #0f4a8a 12px,
+          #0b3a6c 12px,
+          #0b3a6c 24px
+        );
+    }
+    .back .mini{
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: .6px;
+      text-shadow: 0 2px 0 rgba(0,0,0,.25);
+    }
+    .back .star{
+      font-size: 52px;
+      text-align:center;
+      line-height: 1;
+      margin-top: 6px;
+      text-shadow: 0 3px 0 rgba(0,0,0,.25);
+    }
+
+    /* elő */
+    .front{
+      background:#fff;
+      transform: rotateY(180deg);
+    }
+    .front.red{ color:#b00020; }
+    .front.black{ color:#111; }
+
+    .top{
+      font-size: 24px;
+      font-weight: 1000;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .mid{
+      font-size: 84px;
+      text-align:center;
+      margin-top: 6px;
+      line-height: 1;
+      font-weight: 900;
+    }
+    .bot{
+      font-size: 16px;
+      font-weight: 800;
+      opacity: .9;
+    }
+
+    .hint{
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 3px solid #111;
+      background: #fff7cc;
+      font-size: 18px;
+      font-weight: 800;
+      max-width: 1400px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Kártyapakli</h1>
+
+  <div class="controls">
+    <label>
+      Kiterített lapok száma:
+      <input id="count" type="number" min="1" max="52" value="12" />
+    </label>
+    <button id="deal">Kiterítés</button>
+    <button id="revealAll">Összes felfordítása</button>
+    <button id="hideAll">Összes visszafordítása</button>
+    <button id="newDeck">Új pakli + keverés</button>
+  </div>
+
+  <div class="status" id="status"></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="hint">
+    Kattints egy kártyára: háttal → felfordul → látszik az értéke és színe.
+  </div>
+
+<script>
+  const suits = ["♣", "♦", "♥", "♠"];
+  const suitName = ["Treff", "Káró", "Kör", "Pikk"];
+  const values = ["Á", "2", "3", "4", "5", "6", "7", "8", "9", "10", "B", "D", "K"];
+  const valueName = ["Ász","2","3","4","5","6","7","8","9","10","Bubi","Dáma","Király"];
+
+  function makeDeck(){
+    const d = [];
+    for (let s=0; s<4; s++){
+      for (let v=0; v<13; v++){
+        d.push({suit:s, value:v});
+      }
+    }
+    return d;
+  }
+
+  function shuffle(a){
+    for (let i=a.length-1; i>0; i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function isRed(suitIndex){
+    return suitIndex === 1 || suitIndex === 2;
+  }
+
+  let deck = shuffle(makeDeck());
+  let dealt = [];
+
+  const grid = document.getElementById("grid");
+  const status = document.getElementById("status");
+  const countInput = document.getElementById("count");
+
+  function setStatus(){
+    status.textContent = `Pakliban: ${deck.length} lap | Kiterítve: ${dealt.length} lap`;
+  }
+
+  function cardElement(card){
+    const outer = document.createElement("div");
+    outer.className = "card";
+
+    const inner = document.createElement("div");
+    inner.className = "inner";
+
+    const back = document.createElement("div");
+    back.className = "face back";
+    back.innerHTML = `
+      <div class="mini">KÁRTYA</div>
+      <div class="star">★</div>
+      <div class="mini" style="text-align:right;">HÁT</div>
+    `;
+
+    const front = document.createElement("div");
+    front.className = "face front " + (isRed(card.suit) ? "red" : "black");
+    const v = values[card.value];
+    const s = suits[card.suit];
+    front.innerHTML = `
+      <div class="top"><span>${v}</span><span>${s}</span></div>
+      <div class="mid">${s}</div>
+      <div class="bot">${valueName[card.value]} • ${suitName[card.suit]}</div>
+    `;
+
+    inner.appendChild(back);
+    inner.appendChild(front);
+    outer.appendChild(inner);
+
+    outer.addEventListener("click", () => {
+      outer.classList.toggle("flipped");
+    });
+
+    return outer;
+  }
+
+  function render(){
+    grid.innerHTML = "";
+    for (const c of dealt) grid.appendChild(cardElement(c));
+    setStatus();
+  }
+
+  function deal(){
+    const n = Math.max(1, Math.min(52, parseInt(countInput.value || "12", 10)));
+    if (deck.length < n) deck = shuffle(makeDeck());
+    dealt = deck.splice(0, n);
+    render();
+  }
+
+  function revealAll(){
+    document.querySelectorAll(".card").forEach(el => el.classList.add("flipped"));
+  }
+
+  function hideAll(){
+    document.querySelectorAll(".card").forEach(el => el.classList.remove("flipped"));
+  }
+
+  function newDeck(){
+    deck = shuffle(makeDeck());
+    dealt = [];
+    render();
+  }
+
+  document.getElementById("deal").addEventListener("click", deal);
+  document.getElementById("revealAll").addEventListener("click", revealAll);
+  document.getElementById("hideAll").addEventListener("click", hideAll);
+  document.getElementById("newDeck").addEventListener("click", newDeck);
+
+  render();
+</script>
+</body>
+</html>
