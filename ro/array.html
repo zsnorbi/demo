@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<title>Tablouri C++</title>
+
+<style>
+body{
+  margin:0;
+  background:#0b1020;
+  color:#ffffff;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+/* ===== SCROLLBAR SUBȚIRE ===== */
+*{
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.25) transparent;
+}
+*::-webkit-scrollbar{ width:8px; height:8px; }
+*::-webkit-scrollbar-track{ background:transparent; }
+*::-webkit-scrollbar-thumb{
+  background-color: rgba(255,255,255,0.25);
+  border-radius:8px;
+  border:2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover{
+  background-color: rgba(255,255,255,0.4);
+}
+
+/* ===== HEADER ===== */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+
+h1{
+  margin:20px 0 10px;
+  font-size:32px;
+}
+
+.projector-toggle{
+  position:absolute;
+  right:20px;
+  top:50%;
+  transform:translateY(-50%);
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.12);
+  border:2px solid rgba(255,255,255,0.25);
+  color:white;
+  font-size:22px;
+  cursor:pointer;
+  opacity:0.7;
+}
+.projector-toggle:hover{ opacity:1; }
+
+/* ===== LAYOUT ===== */
+.wrapper{
+  display:grid;
+  grid-template-columns:420px 1fr;
+  gap:20px;
+  padding:20px;
+}
+
+/* ===== PANOU CONTROL ===== */
+.panel{
+  background:#121a33;
+  border-radius:16px;
+  padding:20px;
+}
+
+.panel h2{
+  margin-top:0;
+  font-size:22px;
+}
+
+label{
+  display:block;
+  font-size:18px;
+  margin-top:14px;
+}
+
+input{
+  width:calc(100% - 25px);
+  padding:12px;
+  font-size:18px;
+  border-radius:10px;
+  border:none;
+  margin-top:6px;
+}
+
+button{
+  margin-top:14px;
+  width:100%;
+  padding:14px;
+  font-size:18px;
+  border-radius:12px;
+  border:none;
+  cursor:pointer;
+}
+
+button.primary{ background:#2b6fff; color:white; }
+button.green{ background:#27c07d; }
+button.gray{ background:#3a3f66; color:white; }
+
+/* ===== STATUS ===== */
+.status{
+  padding:20px;
+  border-radius:16px;
+  font-size:24px;
+  font-weight:700;
+  text-align:center;
+  background:#101a3a;
+  border:3px solid #2b6fff;
+  transition: transform 0.15s ease;
+}
+
+.status.info{ background:#102a55; border-color:#2b6fff; }
+.status.success{ background:#0f3a2a; border-color:#27c07d; }
+.status.reset{ background:#3a1020; border-color:#ff4d6d; }
+
+.status-footer{
+  margin:20px;
+}
+
+/* ===== MEMORIE ===== */
+.memory{
+  background:#0f1730;
+  border-radius:16px;
+  padding:20px;
+  position:sticky;
+  top:20px;
+  align-self:start;
+  max-height:calc(100vh - 40px);
+  overflow:auto;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(10,1fr);
+  gap:12px;
+}
+
+.cell{
+  aspect-ratio:1/1;
+  border-radius:12px;
+  border:2px solid rgba(255,255,255,0.2);
+  background:#1a1f3d;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  font-weight:600;
+}
+
+.cell.alloc{ background:#244fb8; }
+.cell.used{ background:#1e8f63; }
+.cell.active{ outline:4px solid #ffcc00; }
+
+.addr{
+  position:absolute;
+  top:6px;
+  left:8px;
+  font-size:13px;
+  opacity:0.7;
+}
+
+.idx{
+  position:absolute;
+  bottom:6px;
+  right:8px;
+  font-size:14px;
+  opacity:0.8;
+}
+
+/* ===== MOD PROIECTOR ===== */
+body.projector h1{ font-size:42px; }
+body.projector .wrapper{ grid-template-columns:520px 1fr; padding-bottom:170px; }
+body.projector .grid{ grid-template-columns:repeat(8,1fr); gap:16px; }
+body.projector .cell{ font-size:30px; border-width:3px; }
+body.projector .addr,
+body.projector .idx{ font-size:16px; }
+
+body.projector .status-footer{
+  position:fixed;
+  left:20px;
+  right:20px;
+  bottom:20px;
+  z-index:1000;
+  font-size:32px;
+  padding:24px;
+  box-shadow:0 0 40px rgba(0,0,0,0.6);
+}
+</style>
+</head>
+
+<body>
+
+<header class="topbar">
+  <h1>Tablouri C++</h1>
+  <button id="projectorBtn" class="projector-toggle"
+          onclick="toggleProjector()" title="Mod proiector">
+    🎥
+  </button>
+</header>
+
+<div class="wrapper">
+
+  <!-- CONTROL -->
+  <div class="panel">
+    <h2>Control</h2>
+
+    <label>Dimensiunea tabloului (N)</label>
+    <input id="n" type="number" value="6" min="0" max="50">
+    <button class="primary" onclick="allocate()">Alocare memorie</button>
+
+    <label>Valori (ex: 10,20,30)</label>
+    <input id="values" placeholder="10, 20, 30">
+    <button class="green" onclick="loadValues()">Scriere valori</button>
+    <button class="gray" onclick="randomFill()">Umplere aleatoare</button>
+
+    <label>Vizualizare index</label>
+    <input id="inspect" type="number" value="0">
+    <button class="primary" onclick="inspectIndex()">Valoare index</button>
+
+    <button class="gray" onclick="step()">Parcurgere – următor</button>
+    <button class="gray" onclick="freeArray()">Resetare</button>
+  </div>
+
+  <!-- MEMORIE -->
+  <div class="memory">
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<div class="status status-footer" id="status">
+  Stare: nu există tablou alocat
+</div>
+
+<script>
+const MEM_SIZE=50, BASE=1000, SIZEOF_INT=4;
+let N=0, arr=[], active=-1;
+
+const grid=document.getElementById("grid");
+const status=document.getElementById("status");
+
+function build(){
+  grid.innerHTML="";
+  for(let i=0;i<MEM_SIZE;i++){
+    const c=document.createElement("div");
+    c.className="cell";
+    c.innerHTML=`<div class="addr">${BASE+i*SIZEOF_INT}</div><div class="idx">${i}</div>`;
+    grid.appendChild(c);
+  }
+}
+
+function render(){
+  [...grid.children].forEach((c,i)=>{
+    c.className="cell";
+    c.innerHTML=`<div class="addr">${BASE+i*SIZEOF_INT}</div>`;
+    if(i<N){
+      c.classList.add("alloc");
+      c.innerHTML+=`<div class="idx">${i}</div>`;
+      if(arr[i]!==undefined){
+        c.classList.add("used");
+        c.innerHTML=`<div class="addr">${BASE+i*SIZEOF_INT}</div>${arr[i]}<div class="idx">${i}</div>`;
+      }
+    }
+    if(i===active) c.classList.add("active");
+  });
+}
+
+function setStatus(msg,type="info"){
+  status.className="status status-footer "+type;
+  status.textContent=msg;
+  status.style.transform="scale(1.05)";
+  setTimeout(()=>status.style.transform="scale(1)",150);
+}
+
+function allocate(){
+  N=+n.value; arr=new Array(N); active=N?0:-1;
+  setStatus(`Memorie alocată: N = ${N}`,"success");
+  render();
+}
+
+function freeArray(){
+  N=0; arr=[]; active=-1;
+  setStatus("Resetare – memoria eliberată","reset");
+  render();
+}
+
+function loadValues(){
+  values.value.split(",").map(v=>v.trim()).filter(v=>v)
+    .slice(0,N).forEach((v,i)=>arr[i]=Number(v));
+  setStatus("Valorile au fost scrise","success");
+  render();
+}
+
+function randomFill(){
+  for(let i=0;i<N;i++) arr[i]=Math.floor(Math.random()*100);
+  setStatus("Valori aleatoare generate");
+  render();
+}
+
+function step(){
+  if(!N) return;
+  active=(active+1)%N;
+  setStatus(`Parcurgere: i=${active}, a[i]=${arr[active] ?? "?"}`);
+  render();
+}
+
+function inspectIndex(){
+  const i=+inspect.value;
+  if(i<0||i>=N){
+    setStatus(`Eroare: index în afara domeniului (0..${N-1})`);
+    return;
+  }
+  active=i;
+  setStatus(`Indexare: a[${i}] = ${arr[i] ?? "?"}`);
+  render();
+}
+
+function toggleProjector(){
+  document.body.classList.toggle("projector");
+  render();
+}
+
+build(); render();
+</script>
+
+</body>
+</html>
