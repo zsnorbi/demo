@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KÓD-KRIMI — Ponttábla</title>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#0f1a30;
+      --text:#e8eefc;
+      --muted:#aab7d6;
+      --accent:#6ea8fe;
+      --good:#41d19a;
+      --warn:#ffd166;
+      --bad:#ff5c7a;
+      --border:rgba(255,255,255,.08);
+      --shadow: 0 10px 25px rgba(0,0,0,.35);
+      --radius: 18px;
+
+      --baseFont: 16px;
+      --btnPadY: 10px;
+      --btnPadX: 12px;
+      --fieldPadY: 11px;
+      --fieldPadX: 12px;
+    }
+
+    *{ box-sizing:border-box; }
+    html{ font-size: var(--baseFont); }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(110,168,254,.22), transparent 60%),
+                  radial-gradient(900px 500px at 80% 30%, rgba(65,209,154,.14), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      padding:24px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .wrap{
+      max-width: 1100px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:18px;
+    }
+
+    @media (max-width: 980px){
+      .wrap{ grid-template-columns: 1fr; }
+    }
+
+    header{
+      grid-column: 1 / -1;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:6px;
+    }
+
+    h1{
+      margin:0;
+      font-size: 26px;
+      letter-spacing:.3px;
+    }
+
+    .pill{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      padding:12px 14px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      box-shadow: var(--shadow);
+    }
+    .pill small{ color:var(--muted); font-size: 13px; }
+    .pill strong{ font-weight:800; font-size: 16px; }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:16px 16px;
+      border-bottom:1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .card .bd{
+      padding:16px;
+    }
+
+    input, select{
+      width:100%;
+      padding: var(--fieldPadY) var(--fieldPadX);
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      outline:none;
+      font-size: 1rem;
+      min-height: 44px;
+    }
+    input::placeholder{ color: rgba(232,238,252,.45); }
+
+    .btn{
+      padding: var(--btnPadY) var(--btnPadX);
+      border-radius: 14px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      cursor:pointer;
+      transition: transform .05s ease, background .15s ease;
+      user-select:none;
+      white-space:nowrap;
+      font-size: 1rem;
+      min-height: 44px;
+    }
+    .btn:hover{ background: rgba(255,255,255,.07); }
+    .btn:active{ transform: translateY(1px); }
+
+    .btn.primary{
+      background: rgba(110,168,254,.16);
+      border-color: rgba(110,168,254,.35);
+    }
+    .btn.good{
+      background: rgba(65,209,154,.14);
+      border-color: rgba(65,209,154,.35);
+    }
+    .btn.bad{
+      background: rgba(255,92,122,.14);
+      border-color: rgba(255,92,122,.35);
+    }
+    .btn.warn{
+      background: rgba(255,209,102,.14);
+      border-color: rgba(255,209,102,.35);
+      color: var(--text);
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width: 980px){
+      .grid2{ grid-template-columns: 1fr; }
+    }
+
+    .quick{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    table{
+      width:100%;
+      border-collapse: collapse;
+    }
+
+    thead th{
+      text-align:left;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight:700;
+      padding:12px 12px;
+      border-bottom:1px solid var(--border);
+    }
+
+    tbody td{
+      padding:14px 12px;
+      border-bottom:1px solid var(--border);
+      vertical-align:middle;
+      font-size: 1rem;
+    }
+
+    .rank{
+      width:36px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      font-weight:700;
+    }
+
+    .team{
+      font-weight:800;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .points{
+      text-align:right;
+      font-variant-numeric: tabular-nums;
+      font-weight:900;
+      width:90px;
+      font-size: 1.05rem;
+    }
+
+    .barWrap{
+      width:100%;
+      height:12px;
+      background: rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .bar{
+      height:100%;
+      width:0%;
+      background: linear-gradient(90deg, rgba(110,168,254,.9), rgba(65,209,154,.9));
+      border-radius:999px;
+      transition: width .25s ease;
+    }
+
+    .muted{
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .rightTools{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+
+    .mini{
+      font-size: 13px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      min-height: 42px;
+    }
+
+    .dangerZone{
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px dashed rgba(255,255,255,.12);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .footerHint{
+      grid-column: 1 / -1;
+      color: rgba(232,238,252,.5);
+      font-size: 12px;
+      margin-top: 4px;
+      text-align:center;
+    }
+
+    @media (max-width: 700px){
+      :root{
+        --baseFont: 18px;
+        --btnPadY: 12px;
+        --btnPadX: 14px;
+        --fieldPadY: 13px;
+        --fieldPadX: 14px;
+      }
+
+      body{ padding: 14px; }
+
+      header{
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      h1{ font-size: 28px; }
+
+      .pill{
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      thead th:nth-child(4),
+      tbody td:nth-child(4){
+        display:none;
+      }
+
+      .points{ width: 80px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>KÓD-KRIMI — Ponttábla</h1>
+      </div>
+
+      <div class="pill" id="statsPill" title="Összes csapat és összpontszám">
+        <small>Csapatok:</small> <strong id="teamCount">0</strong>
+        <span style="opacity:.35">•</span>
+        <small>Összpont:</small> <strong id="totalPoints">0</strong>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="hd">
+        <div>
+          <strong>Aktuális állás</strong>
+          <div class="muted">Automatikus rendezés pontszám szerint</div>
+        </div>
+        <div class="rightTools">
+          <button class="btn mini warn" id="btnResetAll">Nullázás</button>
+        </div>
+      </div>
+
+      <div class="bd">
+        <table>
+          <thead>
+            <tr>
+              <th class="rank">#</th>
+              <th>Csapat</th>
+              <th>Pont</th>
+              <th style="width:40%;">Vizualizáció</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <aside class="card">
+      <div class="hd">
+        <div>
+          <strong>Kezelőpult</strong>
+          <div class="muted">Csapatok + pontozás</div>
+        </div>
+      </div>
+
+      <div class="bd">
+        <div class="grid2">
+          <div>
+            <label class="muted">Új csapat neve</label>
+            <input id="teamName" placeholder="pl. Bug Busters" />
+          </div>
+          <div style="display:flex; align-items:flex-end; gap:10px;">
+            <button class="btn good" id="btnAddTeam" style="width:100%;">Csapat hozzáadása</button>
+          </div>
+        </div>
+
+        <div style="height:12px;"></div>
+
+        <div class="grid2">
+          <div>
+            <label class="muted">Válassz csapatot</label>
+            <select id="teamSelect"></select>
+          </div>
+          <div>
+            <label class="muted">Egyedi pont</label>
+            <input id="customPoints" type="number" placeholder="pl. 10" />
+          </div>
+        </div>
+
+        <div style="height:10px;"></div>
+
+        <div class="quick">
+          <button class="btn primary" data-points="10">+10</button>
+          <button class="btn" data-points="7">+7</button>
+          <button class="btn" data-points="5">+5</button>
+          <button class="btn bad" data-points="-2">-2</button>
+          <button class="btn" id="btnApplyCustom">Egyedi hozzáadás</button>
+        </div>
+
+        <div class="dangerZone">
+          <button class="btn warn" id="btnResetTeam">Kiválasztott csapat nullázása</button>
+          <button class="btn bad" id="btnDeleteTeam">Kiválasztott csapat törlése</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="footerHint">
+      Mentés automatikusan: böngésző LocalStorage • offline is működik
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "kod_krimi_scoreboard_v1";
+
+    function loadState() {
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return { teams: [] };
+        const parsed = JSON.parse(raw);
+        if(!parsed?.teams) return { teams: [] };
+        return parsed;
+      }catch{
+        return { teams: [] };
+      }
+    }
+
+    function saveState(state) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    let state = loadState();
+
+    const leaderboardBody = document.getElementById("leaderboardBody");
+    const teamSelect = document.getElementById("teamSelect");
+    const teamNameInput = document.getElementById("teamName");
+    const customPointsInput = document.getElementById("customPoints");
+
+    const teamCountEl = document.getElementById("teamCount");
+    const totalPointsEl = document.getElementById("totalPoints");
+
+    const btnAddTeam = document.getElementById("btnAddTeam");
+    const btnApplyCustom = document.getElementById("btnApplyCustom");
+    const btnResetTeam = document.getElementById("btnResetTeam");
+    const btnDeleteTeam = document.getElementById("btnDeleteTeam");
+    const btnResetAll = document.getElementById("btnResetAll");
+
+    document.querySelectorAll("[data-points]").forEach(btn=>{
+      btn.addEventListener("click", () => {
+        const pts = Number(btn.getAttribute("data-points"));
+        addPointsToSelectedTeam(pts);
+      });
+    });
+
+    function uid(){
+      return Math.random().toString(16).slice(2) + Date.now().toString(16);
+    }
+
+    function normalizeName(name){
+      return name.trim().replace(/\s+/g, " ");
+    }
+
+    function getSelectedTeamId(){
+      return teamSelect.value || "";
+    }
+
+    function getSelectedTeam(){
+      const id = getSelectedTeamId();
+      return state.teams.find(t => t.id === id) || null;
+    }
+
+    function sortTeamsForDisplay(teams){
+      return [...teams].sort((a,b)=>{
+        if(b.points !== a.points) return b.points - a.points;
+        return b.updatedAt - a.updatedAt;
+      });
+    }
+
+    function clampMinZero(n){
+      return Math.max(0, n);
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function render(){
+      teamSelect.innerHTML = "";
+      const sorted = sortTeamsForDisplay(state.teams);
+
+      sorted.forEach(t=>{
+        const opt = document.createElement("option");
+        opt.value = t.id;
+        opt.textContent = t.name;
+        teamSelect.appendChild(opt);
+      });
+
+      if(sorted.length === 0){
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "— Nincs csapat —";
+        teamSelect.appendChild(opt);
+      }
+
+      leaderboardBody.innerHTML = "";
+
+      const maxPoints = Math.max(1, ...sorted.map(t=>t.points));
+      sorted.forEach((t, idx)=>{
+        const tr = document.createElement("tr");
+
+        const tdRank = document.createElement("td");
+        tdRank.className = "rank";
+        tdRank.textContent = String(idx + 1);
+
+        const tdTeam = document.createElement("td");
+        tdTeam.innerHTML = `
+          <div class="team">
+            <span>${escapeHtml(t.name)}</span>
+          </div>
+        `;
+
+        const tdPoints = document.createElement("td");
+        tdPoints.className = "points";
+        tdPoints.textContent = String(t.points);
+
+        const tdBar = document.createElement("td");
+        const pct = Math.round((t.points / maxPoints) * 100);
+        tdBar.innerHTML = `
+          <div class="barWrap" title="${pct}%">
+            <div class="bar" style="width:${pct}%;"></div>
+          </div>
+        `;
+
+        tr.appendChild(tdRank);
+        tr.appendChild(tdTeam);
+        tr.appendChild(tdPoints);
+        tr.appendChild(tdBar);
+
+        leaderboardBody.appendChild(tr);
+      });
+
+      teamCountEl.textContent = String(state.teams.length);
+      totalPointsEl.textContent = String(state.teams.reduce((sum,t)=>sum + t.points, 0));
+
+      saveState(state);
+    }
+
+    btnAddTeam.addEventListener("click", () => {
+      const name = normalizeName(teamNameInput.value);
+      if(!name) return;
+
+      const exists = state.teams.some(t => t.name.toLowerCase() === name.toLowerCase());
+      if(exists) return;
+
+      const team = { id: uid(), name, points: 0, updatedAt: Date.now() };
+      state.teams.push(team);
+
+      teamNameInput.value = "";
+      render();
+      teamSelect.value = team.id;
+    });
+
+    btnApplyCustom.addEventListener("click", () => {
+      const raw = customPointsInput.value;
+      if(raw === "") return;
+      const pts = Number(raw);
+      if(Number.isNaN(pts)) return;
+      addPointsToSelectedTeam(pts);
+      customPointsInput.value = "";
+    });
+
+    function addPointsToSelectedTeam(delta){
+      const team = getSelectedTeam();
+      if(!team) return;
+
+      team.points = clampMinZero(team.points + delta);
+      team.updatedAt = Date.now();
+      render();
+    }
+
+    btnResetTeam.addEventListener("click", () => {
+      const team = getSelectedTeam();
+      if(!team) return;
+
+      if(!confirm(`Nullázod a "${team.name}" csapat pontját?`)) return;
+      team.points = 0;
+      team.updatedAt = Date.now();
+      render();
+    });
+
+    btnDeleteTeam.addEventListener("click", () => {
+      const team = getSelectedTeam();
+      if(!team) return;
+
+      if(!confirm(`Törlöd a "${team.name}" csapatot?`)) return;
+      state.teams = state.teams.filter(t => t.id !== team.id);
+      render();
+    });
+
+    btnResetAll.addEventListener("click", () => {
+      if(!confirm("Biztosan nullázod AZ ÖSSZES pontot és csapatot?")) return;
+      state = { teams: [] };
+      localStorage.removeItem(STORAGE_KEY);
+      render();
+    });
+
+    teamNameInput.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter") btnAddTeam.click();
+    });
+    customPointsInput.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter") btnApplyCustom.click();
+    });
+
+    render();
+  </script>
+</body>
+</html>
