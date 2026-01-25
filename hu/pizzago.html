@@ -1,0 +1,2759 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PizzaGo – SQL Unlock (Full Flow)</title>
+
+  <style>
+    :root{
+      --tomato:#ff4d4d;
+      --tomato2:#ff2b2b;
+      --cheese:#ffcc66;
+      --basil:#22c55e;
+
+      /* LIGHT APP */
+      --bg0:#f7f8fc;
+      --bg1:#e9eef8;
+
+      --line:rgba(15,23,42,.12);
+      --text:#0f172a;
+      --muted:#334155;
+      --muted2:#475569;
+
+      --shadow: 0 18px 60px rgba(15,23,42,.12);
+      --shadow2: 0 12px 34px rgba(15,23,42,.10);
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+
+      /* PROJECTOR FRIENDLY */
+      --base-font: 18px;
+      --btn-font: 18px;
+
+      /* DARK CONSOLE */
+      --consoleBg: rgba(18, 12, 32, .97);
+      --consoleBg2: rgba(30, 16, 54, .96);
+      --consoleLine: rgba(210, 190, 255, .22);
+      --consoleGlow: 0 -22px 80px rgba(147, 51, 234, .22);
+      --consoleAccent1: rgba(168, 85, 247, .28);
+      --consoleAccent2: rgba(34, 211, 238, .18);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      font-size: var(--base-font);
+      background:
+        radial-gradient(900px 500px at 15% 10%, rgba(255,77,77,.10), transparent 60%),
+        radial-gradient(900px 500px at 90% 15%, rgba(255,204,102,.10), transparent 55%),
+        radial-gradient(900px 600px at 55% 90%, rgba(34,197,94,.08), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      padding: 18px;
+    }
+
+    .hidden{ display:none !important; }
+
+    .shell{
+      max-width: 1200px;
+      margin: 0 auto;
+      display:grid;
+      grid-template-columns: 1fr 420px;
+      gap: 18px;
+      align-items:start;
+    }
+    @media (max-width: 1240px){
+      .shell{ grid-template-columns: 1fr; }
+    }
+
+    .surface{
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.84);
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(10px);
+    }
+
+    /* ===== Topbar ===== */
+    .topbar{
+      grid-column: 1 / -1;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.86);
+      box-shadow: var(--shadow2);
+      position: sticky;
+      top: 12px;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+    @media (max-width: 800px){
+      .topbar{ flex-direction: column; align-items:flex-start; }
+    }
+
+    .brand{ display:flex; align-items:center; gap: 12px; }
+    .logo{
+      width: 52px; height: 52px; border-radius: 20px;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,204,102,.95), rgba(255,204,102,.22) 55%),
+        linear-gradient(135deg, rgba(255,77,77,1), rgba(255,43,43,.75));
+      box-shadow: 0 14px 32px rgba(255,77,77,.14);
+      display:flex; align-items:center; justify-content:center;
+      font-weight: 1000; letter-spacing: .5px; color:#0b1020;
+      user-select:none; font-size: 20px;
+    }
+    .brandTitle{ display:grid; gap: 2px; }
+    .brandTitle b{ font-size: 18px; letter-spacing:.2px; }
+    .brandTitle span{ font-size: 14px; color: var(--muted2); font-weight: 800; }
+
+    .topActions{
+      display:flex; gap: 10px; align-items:center;
+      flex-wrap: wrap; justify-content:flex-end;
+    }
+
+    .pill{
+      display:inline-flex; align-items:center; gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.92);
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+      user-select:none;
+      font-weight: 800;
+    }
+    .pill strong{ color: var(--text); font-weight: 1000; }
+
+    .dot{
+      width: 10px; height: 10px; border-radius: 99px;
+      background: rgba(15,23,42,.28);
+      box-shadow: 0 0 0 4px rgba(15,23,42,.06);
+    }
+
+    .btn{
+      border:0;
+      cursor:pointer;
+      font-family: var(--sans);
+      font-weight: 1000;
+      font-size: var(--btn-font);
+      letter-spacing: .2px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      color: var(--text);
+      background: rgba(15,23,42,.06);
+      border: 1px solid rgba(15,23,42,.16);
+      box-shadow: 0 10px 24px rgba(15,23,42,.12);
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      background: rgba(15,23,42,.09);
+      border-color: rgba(15,23,42,.22);
+    }
+    .btn:active{ transform: translateY(0px); }
+
+    .btnPrimary{
+      background: linear-gradient(135deg, rgba(255,77,77,1), rgba(255,43,43,.92));
+      border-color: rgba(255,77,77,.60);
+      box-shadow: 0 16px 45px rgba(255,77,77,.18);
+      color:#081023;
+    }
+
+    .main{ display:grid; gap: 18px; }
+
+    /* ===== Big step screen ===== */
+    .stepScreen{
+      grid-column: 1 / -1;
+      padding: 26px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height: 520px;
+      position: relative;
+      overflow:hidden;
+    }
+    .stepScreen::before{
+      content:"";
+      position:absolute;
+      inset:-60px;
+      background:
+        radial-gradient(900px 320px at 15% 10%, rgba(255,77,77,.14), transparent 60%),
+        radial-gradient(900px 320px at 90% 20%, rgba(255,204,102,.14), transparent 55%),
+        radial-gradient(900px 340px at 55% 95%, rgba(34,197,94,.10), transparent 60%);
+      filter: blur(10px);
+      opacity:.65;
+      pointer-events:none;
+    }
+    .stepCard{
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      width: 100%;
+      border-radius: 26px;
+      border: 1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.90);
+      padding: 22px;
+      box-shadow: var(--shadow);
+      text-align:center;
+    }
+
+    .stepIcon{
+      width: 78px;
+      height: 78px;
+      border-radius: 28px;
+      margin: 0 auto 12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,204,102,.95), rgba(255,204,102,.20) 60%),
+        linear-gradient(135deg, rgba(255,77,77,1), rgba(255,43,43,.70));
+      box-shadow: 0 18px 45px rgba(255,77,77,.16);
+      font-size: 30px;
+      user-select:none;
+      color:#0b1020;
+      font-weight:1000;
+      letter-spacing:.5px;
+    }
+
+    .stepCard h2{
+      margin: 0;
+      font-size: 24px;
+      letter-spacing:.2px;
+      line-height: 1.2;
+    }
+
+    .stepCard p{
+      margin: 12px 0 16px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+      font-weight: 800;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 14px;
+      text-align:left;
+      margin-top: 14px;
+    }
+    @media (max-width: 980px){
+      .grid2{ grid-template-columns: 1fr; }
+    }
+
+    .miniCard{
+      border-radius: 22px;
+      border: 1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.94);
+      padding: 14px;
+      box-shadow: 0 12px 28px rgba(15,23,42,.08);
+    }
+    .miniCard h3{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.2px;
+    }
+    .miniCard p{
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 800;
+    }
+
+    /* ===== Auth card ===== */
+    .tabs{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .tabBtn{
+      padding: 12px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.92);
+      cursor:pointer;
+      font-weight: 1000;
+      color: var(--muted2);
+    }
+    .tabBtn.active{
+      background: rgba(255,77,77,.12);
+      border-color: rgba(255,77,77,.35);
+      color: var(--text);
+    }
+
+    .formRow{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    @media (max-width: 820px){
+      .formRow{ grid-template-columns: 1fr; }
+    }
+
+    .fieldLabel{
+      display:block;
+      margin: 0 0 6px;
+      color: var(--muted2);
+      font-size: 13px;
+      font-weight: 1000;
+      letter-spacing:.2px;
+    }
+
+    .input{
+      width: 100%;
+      padding: 14px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(15,23,42,.18);
+      background: rgba(255,255,255,.98);
+      color: var(--text);
+      outline:none;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .input::placeholder{ color: rgba(51,65,85,.60); }
+    .input:focus{
+      border-color: rgba(255,77,77,.45);
+      box-shadow: 0 0 0 5px rgba(255,77,77,.12);
+    }
+
+    .actionsRow{
+      display:flex;
+      gap: 10px;
+      justify-content:flex-end;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .noticePill{
+      display:inline-flex;
+      gap: 8px;
+      align-items:center;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.92);
+      color: var(--muted2);
+      font-weight: 900;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    /* ===== Menu / cards ===== */
+    .hero{
+      border-radius: 26px;
+      background: rgba(255,255,255,.86);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow2);
+      padding: 18px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 14px;
+    }
+    @media (max-width: 800px){
+      .hero{ flex-direction: column; }
+    }
+
+    .heroLeft{ display:grid; gap: 10px; max-width: 72ch; }
+    .hero h1{ margin:0; font-size: 22px; letter-spacing: .2px; line-height: 1.2; }
+    .hero p{ margin:0; color: var(--muted); font-size: 16px; line-height: 1.45; font-weight: 800; }
+
+    .controls{
+      display:flex;
+      gap: 14px;
+      align-items:center;
+      flex-wrap: wrap;
+      justify-content:space-between;
+      padding: 16px 18px;
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.86);
+      box-shadow: var(--shadow2);
+    }
+
+    .searchWrap{
+      flex: 1;
+      min-width: 280px;
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+
+    .toggleGroup{
+      display:flex;
+      gap: 12px;
+      align-items:center;
+      flex-wrap: wrap;
+    }
+
+    .toggle{
+      display:inline-flex;
+      align-items:center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(15,23,42,.16);
+      background: rgba(255,255,255,.90);
+      color: var(--text);
+      font-weight: 1000;
+      font-size: 16px;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+    }
+    .toggle:hover{ transform: translateY(-1px); }
+
+    .toggle .mini{
+      font-weight: 1000;
+      font-size: 14px;
+      color: var(--muted2);
+    }
+
+    .lockedUI{
+      opacity: .55;
+      cursor:pointer;
+    }
+
+    .select{
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(15,23,42,.18);
+      background: rgba(255,255,255,.92);
+      color: var(--text);
+      outline:none;
+      font-weight: 1000;
+      font-size: 16px;
+      cursor:pointer;
+      min-width: 240px;
+    }
+
+    .menuGrid{
+      display:grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1100px){
+      .menuGrid{ grid-template-columns: 1fr; }
+    }
+
+    .pizzaCard{
+      border-radius: 26px;
+      border: 1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.90);
+      box-shadow: 0 12px 34px rgba(15,23,42,.10);
+      padding: 16px;
+      overflow:hidden;
+      position: relative;
+      min-height: 220px;
+    }
+
+    .pizzaTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .pizzaArt{
+      width: 66px;
+      height: 66px;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 35% 35%, rgba(255,204,102,.95), rgba(255,204,102,.20) 60%),
+        linear-gradient(135deg, rgba(255,77,77,1), rgba(255,43,43,.70));
+      box-shadow: 0 16px 40px rgba(255,77,77,.14);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 32px;
+      user-select:none;
+    }
+
+    .pizzaName{ margin:0; font-size: 18px; letter-spacing:.2px; font-weight: 1100; }
+    .pizzaDesc{ margin: 7px 0 0; color: var(--muted); font-size: 15px; line-height: 1.45; font-weight: 800; }
+
+    .badgeRow{
+      margin-top: 12px;
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap: 7px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(15,23,42,.12);
+      background: rgba(248,250,252,.95);
+      font-size: 14px;
+      color: var(--muted2);
+      user-select:none;
+      font-weight: 1000;
+    }
+    .badge strong{ color: var(--text); }
+
+    .priceRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .price{ font-weight: 1100; letter-spacing: .2px; font-size: 18px; }
+    .price span{ font-weight: 1000; color: var(--muted2); margin-left: 6px; font-size: 14px; }
+
+    .addBtn{
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(15,23,42,.16);
+      background: rgba(15,23,42,.06);
+      color: var(--text);
+      font-weight: 1100;
+      cursor:pointer;
+      box-shadow: 0 10px 24px rgba(15,23,42,.12);
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+      white-space: nowrap;
+      font-size: 16px;
+    }
+    .addBtn:hover{ transform: translateY(-1px); }
+    .addBtn:active{ transform: translateY(0px); }
+
+    .addBtn.good{
+      background: linear-gradient(135deg, rgba(34,197,94,.95), rgba(16,185,129,.85));
+      border-color: rgba(34,197,94,.55);
+      color: #051014;
+      box-shadow: 0 16px 45px rgba(34,197,94,.14);
+    }
+
+    .lockedOverlay{
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.30));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 20px;
+      text-align:center;
+      border-radius: 26px;
+      opacity: 0;
+      pointer-events:none;
+      transition: opacity .12s ease;
+    }
+    .pizzaCard.locked .lockedOverlay{
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .lockBox{
+      max-width: 520px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(15,23,48,.92);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      padding: 14px;
+      backdrop-filter: blur(10px);
+      color: #eef2ff;
+    }
+    .lockBox b{ display:block; margin-bottom: 6px; font-size: 16px; font-weight: 1100; }
+    .lockBox span{ display:block; color: rgba(220,210,255,.86); font-size: 15px; line-height: 1.45; font-weight: 800; }
+
+    /* ===== Cart ===== */
+    .cart{
+      position: sticky;
+      top: 96px;
+      margin-top:30px;
+      margin-bottom: 110px;
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.86);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      z-index: 5; /* stays visible next to console */
+    }
+    @media (max-width: 1240px){
+      .cart{ position: static; }
+    }
+
+    .cartHead{
+      padding: 16px 18px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      border-bottom: 1px solid rgba(15,23,42,.10);
+      background:
+        radial-gradient(900px 240px at 0% 0%, rgba(255,77,77,.14), transparent 60%),
+        radial-gradient(900px 260px at 100% 20%, rgba(255,204,102,.12), transparent 60%);
+    }
+    .cartHead h3{ margin:0; font-size: 18px; letter-spacing:.2px; }
+    .cartHead p{ margin: 6px 0 0; color: var(--muted); font-size: 15px; line-height: 1.45; font-weight: 800; }
+
+    .cartBody{ padding: 16px 18px; display:grid; gap: 12px; }
+
+    .cartEmpty{
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px dashed rgba(15,23,42,.18);
+      background: rgba(248,250,252,.95);
+      color: var(--muted2);
+      font-size: 15px;
+      line-height: 1.45;
+      font-weight: 800;
+    }
+
+    .cartItem{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(15,23,42,.12);
+      background: rgba(248,250,252,.95);
+    }
+    .cartItem b{ font-size: 16px; letter-spacing:.2px; font-weight: 1100; }
+    .cartItem span{ display:block; color: var(--muted2); font-size: 14px; margin-top: 4px; font-weight: 900; }
+
+    .qtyWrap{ display:flex; align-items:center; gap: 10px; }
+    .qtyBtn{
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      border: 1px solid rgba(15,23,42,.14);
+      background: rgba(15,23,42,.06);
+      color: var(--text);
+      font-weight: 1100;
+      font-size: 20px;
+      cursor:pointer;
+      box-shadow: 0 10px 24px rgba(15,23,42,.10);
+      transition: transform .08s ease;
+    }
+    .qtyBtn:hover{ transform: translateY(-1px); }
+    .qtyBtn:active{ transform: translateY(0px); }
+
+    .qty{ width: 34px; text-align:center; font-weight: 1100; color: var(--text); font-size: 18px; }
+
+    .cartFoot{
+      padding: 16px 18px;
+      border-top: 1px solid rgba(15,23,42,.10);
+      display:grid;
+      gap: 12px;
+      background: rgba(255,255,255,.76);
+    }
+
+    .totalRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 900;
+    }
+    .totalRow strong{
+      color: var(--text);
+      font-size: 19px;
+      letter-spacing:.2px;
+      font-weight: 1100;
+    }
+
+    .checkoutBtn{
+      width:100%;
+      padding: 16px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(15,23,42,.16);
+      background: rgba(15,23,42,.06);
+      color: var(--text);
+      font-weight: 1100;
+      cursor:pointer;
+      box-shadow: 0 10px 24px rgba(15,23,42,.12);
+      transition: transform .08s ease, background .12s ease;
+      font-size: 17px;
+    }
+    .checkoutBtn:hover{ transform: translateY(-1px); }
+    .checkoutBtn:active{ transform: translateY(0px); }
+
+    .subtleNote{ color: var(--muted2); font-size: 14px; line-height: 1.45; margin:0; font-weight: 800; }
+
+    /* ===== SQL Drawer (side, so cart remains visible) ===== */
+    .drawer{
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      width: min(900px, calc(100vw - 32px));
+      transform: translateY(calc(100% - 86px));
+      transition: transform .18s ease;
+      z-index: 999;
+      pointer-events:none;
+    }
+    .drawer.open{
+      transform: translateY(0%);
+      pointer-events:auto;
+    }
+    @media (max-width: 1240px){
+      .drawer{
+        left: 16px;
+        right: 16px;
+        width: auto;
+      }
+    }
+
+    .drawerPanel{
+      border-radius: 28px;
+      border: 1px solid var(--consoleLine);
+      background: linear-gradient(180deg, var(--consoleBg2), var(--consoleBg));
+      box-shadow: var(--consoleGlow);
+      overflow:hidden;
+      backdrop-filter: blur(12px);
+      position: relative;
+      color:#eef2ff;
+    }
+    .drawerPanel::before{
+      content:"";
+      position:absolute;
+      inset: 0;
+      pointer-events:none;
+      background:
+        radial-gradient(900px 240px at 10% 0%, var(--consoleAccent1), transparent 55%),
+        radial-gradient(900px 260px at 90% 20%, var(--consoleAccent2), transparent 55%);
+      opacity: .9;
+    }
+
+    .drawerHead{
+      position: relative;
+      z-index: 1;
+      padding: 14px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      border-bottom: 1px solid rgba(210,190,255,.16);
+      background:
+        radial-gradient(900px 260px at 0% 0%, rgba(168,85,247,.22), transparent 60%),
+        radial-gradient(900px 260px at 100% 35%, rgba(34,211,238,.16), transparent 60%);
+    }
+    .drawerHead b{ font-size: 15px; letter-spacing:.2px; color:#eef2ff; }
+    .drawerHead span{
+      display:block;
+      margin-top: 2px;
+      color: rgba(220,210,255,.86);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .drawerContent{
+      position: relative;
+      z-index: 1;
+      padding: 16px 18px 20px;
+      display:grid;
+      gap: 12px;
+      max-height: min(76vh, 720px);
+      overflow:auto;
+    }
+
+    /* ✅ ONE COLUMN – projector friendly */
+    .unlockGrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .task{
+      border-radius: 22px;
+      border: 1px solid rgba(220,210,255,.14);
+      background: rgba(0,0,0,.18);
+      padding: 14px;
+      display:grid;
+      gap: 12px;
+    }
+
+    .taskTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .taskTop h4{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.2px;
+      font-weight: 1100;
+      color:#eef2ff;
+    }
+    .taskTop p{
+      margin:7px 0 0;
+      color: rgba(220,210,255,.86);
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 800;
+    }
+
+    .state{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(220,210,255,.18);
+      background: rgba(0,0,0,.22);
+      color: rgba(220,210,255,.90);
+      font-size: 14px;
+      user-select:none;
+      white-space: nowrap;
+      font-weight: 1000;
+    }
+    .state .dot{
+      background: rgba(255,77,77,.9);
+      box-shadow: 0 0 0 4px rgba(255,77,77,.12);
+    }
+    .state.ok{
+      color: rgba(238,242,255,.92);
+      border-color: rgba(34,197,94,.25);
+      background: rgba(34,197,94,.10);
+    }
+    .state.ok .dot{
+      background: rgba(34,197,94,.95);
+      box-shadow: 0 0 0 4px rgba(34,197,94,.12);
+    }
+
+    /* ✅ BIG TEXTAREA – projector friendly */
+    textarea{
+      width:100%;
+      min-height: 190px;
+      resize: vertical;
+      border-radius: 22px;
+      padding: 16px 16px;
+      font-family: var(--mono);
+      font-size: 18px;
+      line-height: 1.65;
+      color: #eef2ff;
+      background: rgba(0,0,0,.34);
+      border: 1px solid rgba(220,210,255,.18);
+      outline: none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+      caret-color:#eef2ff;
+    }
+    textarea:focus{
+      border-color: rgba(168,85,247,.65);
+      box-shadow: 0 0 0 6px rgba(168,85,247,.18);
+    }
+
+    .taskFoot{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hint{
+      color: rgba(220,210,255,.86);
+      font-size: 14px;
+      margin:0;
+      font-weight: 900;
+    }
+    .hint code{
+      font-family: var(--mono);
+      font-size: 14px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(220,210,255,.18);
+      background: rgba(255,255,255,.06);
+      color: #eef2ff;
+    }
+
+    .drawerPanel .btn{
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(220,210,255,.28);
+      color: #eef2ff;
+      box-shadow: 0 12px 30px rgba(0,0,0,.42);
+    }
+    .drawerPanel .btn:hover{
+      background: rgba(255,255,255,.14);
+      border-color: rgba(220,210,255,.38);
+    }
+    .drawerPanel .btnPrimary{
+      background: linear-gradient(135deg, rgba(168,85,247,1), rgba(99,102,241,.95));
+      border-color: rgba(168,85,247,.55);
+      color: #070b18;
+      box-shadow: 0 16px 45px rgba(168,85,247,.22);
+    }
+    .drawerPanel .btnPrimary:hover{
+      background: linear-gradient(135deg, rgba(186,105,255,1), rgba(99,102,241,1));
+    }
+
+    /* Toast */
+    .toasts{
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      display:grid;
+      gap: 10px;
+      z-index: 1000;
+      pointer-events:none;
+    }
+    .toast{
+      pointer-events:none;
+      min-width: 300px;
+      max-width: 520px;
+      padding: 14px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(220,210,255,.18);
+      background: rgba(12, 16, 34, .96);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      display:flex;
+      gap: 12px;
+      align-items:flex-start;
+      backdrop-filter: blur(10px);
+      transform: translateY(6px);
+      opacity: 0;
+      animation: toastIn .18s ease forwards;
+      color:#eef2ff;
+    }
+    @keyframes toastIn{
+      to{ transform: translateY(0); opacity: 1; }
+    }
+    .toast .ico{
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 1100;
+      color: #051014;
+      font-size: 17px;
+    }
+    .toast.good .ico{ background: rgba(34,197,94,.95); }
+    .toast.bad  .ico{ background: rgba(255,77,77,.95); }
+    .toast.warn .ico{ background: rgba(255,204,102,.95); }
+    .toast .txt{ display:grid; gap: 2px; }
+    .toast .txt b{ font-size: 15px; letter-spacing:.2px; font-weight: 1100; color:#eef2ff; }
+    .toast .txt span{
+      font-size: 14px;
+      color: rgba(220,210,255,.86);
+      line-height: 1.45;
+      font-weight: 800;
+    }
+
+    /* Help */
+    .helpWrap{ display:flex; align-items:center; gap:10px; }
+
+    .helpIcon{
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      border: 1px solid rgba(220,210,255,.20);
+      background: rgba(255,255,255,.10);
+      color: #eef2ff;
+      font-weight: 1100;
+      cursor:pointer;
+      box-shadow: 0 12px 30px rgba(0,0,0,.18);
+      transition: transform .08s ease, background .12s ease;
+    }
+    .helpIcon:hover{ transform: translateY(-1px); background: rgba(255,255,255,.14); }
+
+    .helpOverlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 2000;
+    }
+    .helpModal{
+      width: min(860px, 100%);
+      border-radius: 26px;
+      border: 1px solid rgba(220,210,255,.20);
+      background: rgba(14, 18, 40, .97);
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      overflow:hidden;
+      color:#eef2ff;
+    }
+    .helpHead{
+      padding: 16px 18px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      border-bottom: 1px solid rgba(220,210,255,.14);
+    }
+    .helpHead b{ font-size: 17px; letter-spacing:.2px; font-weight: 1100; color:#eef2ff; }
+    .helpHead span{ display:block; margin-top: 4px; color: rgba(220,210,255,.86); font-size: 14px; font-weight: 800; }
+
+    .helpBody{ padding: 16px 18px 18px; display:grid; gap: 12px; }
+    .helpCode{
+      font-family: var(--mono);
+      font-size: 16px;
+      line-height: 1.65;
+      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(220,210,255,.18);
+      background: rgba(0,0,0,.35);
+      color: #eef2ff;
+      white-space: pre-wrap;
+    }
+    .helpNote{
+      color: rgba(220,210,255,.92);
+      font-size: 15px;
+      line-height: 1.5;
+      font-weight: 800;
+      white-space: pre-wrap;
+    }
+    /* ===== Console scrim ===== */
+    .scrim{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.62);
+      backdrop-filter: blur(3px);
+      z-index: 998;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="toasts" id="toasts"></div>
+  <div id="scrim" class="scrim hidden"></div>
+
+  <div class="shell">
+    <!-- TOPBAR (csak ha már belépett / menü szakasz látszik) -->
+    <header class="topbar hidden" id="topbar">
+      <div class="brand">
+        <div class="logo">🍕</div>
+        <div class="brandTitle">
+          <b>PizzaGo</b>
+          <span>SQL Unlock – teljes flow</span>
+        </div>
+      </div>
+
+      <div class="topActions">
+        <div class="pill">
+          <span class="dot"></span>
+          Unlock: <strong id="kpiUnlocked">0 / 11</strong>
+        </div>
+        <div class="pill">
+          <span class="dot" style="background:rgba(255,204,102,.85); box-shadow:0 0 0 4px rgba(255,204,102,.12)"></span>
+          Pizzák: <strong id="kpiPizzas">0</strong>
+        </div>
+        <div class="pill">
+          <span class="dot" style="background:rgba(34,197,94,.80); box-shadow:0 0 0 4px rgba(34,197,94,.12)"></span>
+          User: <strong id="kpiUser">-</strong>
+        </div>
+
+        <button class="btn btnPrimary" id="openSqlBtn">SQL Console</button>
+      </div>
+    </header>
+
+    <!-- STEP 0: CREATE DATABASE -->
+    <section id="screenDb" class="stepScreen surface">
+      <div class="stepCard">
+        <div class="stepIcon">SQL</div>
+        <h2>0) Az app “halott” 🔒</h2>
+        <p>
+          Hozz létre egy adatbázist SQL-lel.<br>
+          Amíg nincs <b>CREATE DATABASE</b>, semmi nem indul el.
+        </p>
+
+        <button class="btn btnPrimary" id="dbOpenSql">SQL Console megnyitása</button>
+
+        <div class="grid2">
+          <div class="miniCard">
+            <h3>Miért fontos?</h3>
+            <p>
+              Az SQL-ben a DB az alap. Ha nincs adatbázis, nincs hol tárolni táblákat.
+            </p>
+          </div>
+          <div class="miniCard">
+            <h3>Tipp</h3>
+            <p>
+              A feloldáshoz a queryben szerepeljen a <b>pizzago</b> szó.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 1-4: AUTH FLOW (users table -> register insert -> login select) -->
+    <section id="screenAuth" class="stepScreen surface hidden">
+      <div class="stepCard">
+        <div class="stepIcon">👤</div>
+        <h2>1–4) Auth flow (users → register → login)</h2>
+        <p>
+          Előbb létrehozod a <b>users</b> táblát, utána <b>regisztrálsz</b> (INSERT), majd <b>belépsz</b> (SELECT).
+        </p>
+
+        <div class="grid2">
+          <div class="miniCard">
+            <h3>Állapot</h3>
+            <p id="authProgressText">Következő lépés: CREATE TABLE users</p>
+
+            <div class="tabs">
+              <button class="tabBtn active" id="tabRegister">Regisztráció</button>
+              <button class="tabBtn" id="tabLogin">Login</button>
+            </div>
+
+            <!-- Register -->
+            <div id="registerPanel">
+              <div class="formRow">
+                <div>
+                  <label class="fieldLabel">Név</label>
+                  <input class="input" id="regName" placeholder="pl. Anna" />
+                </div>
+                <div>
+                  <label class="fieldLabel">Email</label>
+                  <input class="input" id="regEmail" placeholder="pl. anna@school.com" />
+                </div>
+                <div>
+                  <label class="fieldLabel">Jelszó</label>
+                  <input class="input" id="regPass" type="password" placeholder="••••" />
+                </div>
+                <div>
+                  <label class="fieldLabel">Jelszó (még egyszer)</label>
+                  <input class="input" id="regPass2" type="password" placeholder="••••" />
+                </div>
+              </div>
+
+              <div class="actionsRow">
+                <button class="btn" id="authOpenSql1">SQL Console</button>
+                <button class="btn btnPrimary" id="doRegisterBtn">Regisztráció</button>
+              </div>
+
+              <div class="noticePill" id="registerStatePill">
+                <span class="dot" style="background:rgba(255,77,77,.85); box-shadow:0 0 0 4px rgba(255,77,77,.12)"></span>
+                Regisztráció: <strong id="registerStateTxt">Locked (INSERT)</strong>
+              </div>
+            </div>
+
+            <!-- Login -->
+            <div id="loginPanel" class="hidden">
+              <div class="formRow">
+                <div>
+                  <label class="fieldLabel">Email</label>
+                  <input class="input" id="loginEmail" placeholder="pl. anna@school.com" />
+                </div>
+                <div>
+                  <label class="fieldLabel">Jelszó</label>
+                  <input class="input" id="loginPass" type="password" placeholder="••••" />
+                </div>
+              </div>
+
+              <div class="actionsRow">
+                <button class="btn" id="authOpenSql2">SQL Console</button>
+                <button class="btn btnPrimary" id="doLoginBtn">Login</button>
+              </div>
+
+              <div class="noticePill" id="loginStatePill">
+                <span class="dot" style="background:rgba(255,77,77,.85); box-shadow:0 0 0 4px rgba(255,77,77,.12)"></span>
+                Login: <strong id="loginStateTxt">Locked (SELECT)</strong>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="miniCard">
+            <h3>Miért ez a sorrend?</h3>
+            <p>
+              <b>users</b> nélkül nem tudunk regisztrálni (nincs tábla).<br><br>
+              Regisztráció = <b>INSERT</b> (új user rekord).<br>
+              Login = <b>SELECT</b> (kivesszük a usert a táblából).
+            </p>
+
+            <div class="noticePill" style="margin-top:12px;">
+              <span class="dot" style="background:rgba(255,204,102,.85); box-shadow:0 0 0 4px rgba(255,204,102,.12)"></span>
+              Következő után: <strong>pizzas + orders</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 5-6: TABLES + INSERT PIZZA -->
+    <section id="screenSchema" class="stepScreen surface hidden">
+      <div class="stepCard">
+        <div class="stepIcon">🧱</div>
+        <h2>5–6) Táblák + 1 pizza beszúrás</h2>
+        <p>
+          Most jönnek a rendeléshez szükséges táblák:<br>
+          <b>CREATE TABLE pizzas</b> + <b>CREATE TABLE orders</b>, majd <b>INSERT</b> legalább 1 pizza.
+        </p>
+
+        <div class="grid2">
+          <div class="miniCard">
+            <h3>Admin: pizza hozzáadás</h3>
+            <p>
+              Ez csak akkor működik, ha feloldottad az <b>INSERT INTO pizzas</b> lépést.
+            </p>
+
+            <div class="formRow">
+              <div>
+                <label class="fieldLabel">Pizza név</label>
+                <input class="input" id="adminPizzaName" placeholder="pl. Margherita" />
+              </div>
+              <div>
+                <label class="fieldLabel">Ár (RON)</label>
+                <input class="input" id="adminPizzaPrice" type="number" placeholder="pl. 29" />
+              </div>
+              <div>
+                <label class="fieldLabel">Leírás</label>
+                <input class="input" id="adminPizzaDesc" placeholder="pl. Tomato, mozzarella, basil" />
+              </div>
+              <div>
+                <label class="fieldLabel">Veg?</label>
+                <select class="select" id="adminPizzaVeg">
+                  <option value="true">Vegetáriánus</option>
+                  <option value="false">Húsos</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="actionsRow">
+              <button class="btn" id="schemaOpenSql">SQL Console</button>
+              <button class="btn btnPrimary" id="adminAddPizzaBtn">Pizza INSERT</button>
+            </div>
+
+            <div class="noticePill" style="margin-top:12px;">
+              <span class="dot" style="background:rgba(255,77,77,.85); box-shadow:0 0 0 4px rgba(255,77,77,.12)"></span>
+              INSERT pizzas: <strong id="pizzaInsertState">Locked</strong>
+            </div>
+          </div>
+
+          <div class="miniCard">
+            <h3>Következő</h3>
+            <p>
+              Ha van legalább 1 pizza, feloldhatod:<br>
+              <b>SELECT pizza lista</b><br>
+              és utána a <b>LIKE</b> keresést/szűrést, majd <b>ORDER BY</b> rendezést.
+            </p>
+
+            <div class="noticePill" style="margin-top:12px;">
+              <span class="dot" style="background:rgba(34,197,94,.80); box-shadow:0 0 0 4px rgba(34,197,94,.12)"></span>
+              Pizzák száma: <strong id="schemaPizzaCount">0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 7-10: APP (menu + searchLike + orderBy + orders insert) -->
+    <div id="appArea" class="hidden">
+      <main class="main">
+        <section class="hero">
+          <div class="heroLeft">
+            <h1>PizzaGo – Menü</h1>
+            <p id="appHintText">
+              Oldd fel a menüt SQL-lel (SELECT pizzas), majd jöhet a LIKE keresés/szűrés, az ORDER BY rendezés, végül a rendelés (INSERT orders).
+            </p>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+            <button class="btn" id="appOpenSql3">SQL Console</button>
+          </div>
+        </section>
+
+        <!-- ✅ App közben is lehet új pizzát hozzáadni (több pizza a listához) -->
+        <section class="surface" id="appAdminPanel" style="padding:16px 18px;">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div style="max-width:70ch;">
+              <h3 style="margin:0; font-size:16px; letter-spacing:.2px;">Admin: új pizza hozzáadás (több pizza a listához)</h3>
+              <p style="margin:6px 0 0; color:var(--muted); font-size:14px; line-height:1.45; font-weight:800;">
+                Csak akkor aktív, ha feloldottad az <b>INSERT INTO pizzas</b> lépést. A hozzáadott pizzák azonnal megjelennek a listában.
+              </p>
+            </div>
+            <div class="noticePill" style="margin:0;">
+              <span class="dot" style="background:rgba(255,204,102,.85); box-shadow:0 0 0 4px rgba(255,204,102,.12)"></span>
+              INSERT pizzas: <strong id="appPizzaInsertState">Locked</strong>
+            </div>
+          </div>
+
+          <div class="formRow">
+            <div>
+              <label class="fieldLabel">Pizza név</label>
+              <input class="input" id="appAdminPizzaName" placeholder="pl. Pepperoni" />
+            </div>
+            <div>
+              <label class="fieldLabel">Ár (RON)</label>
+              <input class="input" id="appAdminPizzaPrice" type="number" placeholder="pl. 35" />
+            </div>
+            <div>
+              <label class="fieldLabel">Leírás</label>
+              <input class="input" id="appAdminPizzaDesc" placeholder="pl. Spicy pepperoni, mozzarella" />
+            </div>
+            <div>
+              <label class="fieldLabel">Veg?</label>
+              <select class="select" id="appAdminPizzaVeg">
+                <option value="false">Húsos</option>
+                <option value="true">Vegetáriánus</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="actionsRow">
+            <button class="btn" id="appAdminOpenSql">SQL Console</button>
+            <button class="btn btnPrimary" id="appAdminAddPizzaBtn">Pizza INSERT</button>
+          </div>
+        </section>
+
+        <section class="controls">
+          <div class="searchWrap">
+            <input class="input" id="searchInput" placeholder="Keresés… (LIKE unlock után)" />
+          </div>
+
+          <div class="toggleGroup">
+            <div class="toggle lockedUI" id="vegToggle">
+              🥬 Veg only <span class="mini" id="vegState">Locked</span>
+            </div>
+
+            <select class="select lockedUI" id="sortSelect">
+              <option value="none">Rendezés: Locked</option>
+              <option value="price_asc">Ár szerint (ASC)</option>
+              <option value="price_desc">Ár szerint (DESC)</option>
+            </select>
+          </div>
+        </section>
+
+        <section>
+          <div class="menuGrid" id="menuGrid"></div>
+        </section>
+      </main>
+
+      <aside class="cart">
+        <div class="cartHead">
+          <div>
+            <h3>🧺 Kosár</h3>
+            <p>Rendelés csak akkor megy, ha feloldottad: <b>INSERT INTO orders</b></p>
+          </div>
+          <div class="pill">
+            <span class="dot" style="background:rgba(34,197,94,.80); box-shadow:0 0 0 4px rgba(34,197,94,.12)"></span>
+            <strong id="cartCount">0</strong>
+          </div>
+        </div>
+
+        <div class="cartBody" id="cartBody">
+          <div class="cartEmpty" id="cartEmpty">
+            A kosarad üres.<br>
+            <span style="color:var(--muted); font-weight:800;">
+              Add to cart csak akkor működik, ha a menü + rendelés fel van oldva.
+            </span>
+          </div>
+        </div>
+
+        <div class="cartFoot">
+          <div class="totalRow">
+            <span>Összesen</span>
+            <strong id="cartTotal">0 RON</strong>
+          </div>
+
+          <button class="checkoutBtn" id="checkoutBtn">Megrendelés</button>
+
+          <p class="subtleNote">
+            ✅ Biztonságos: nincs backend, nincs valódi SQL futtatás<br>
+            🎓 Unlock = kulcsszavas ellenőrzés
+          </p>
+        </div>
+      </aside>
+    </div>
+
+  </div>
+
+  <!-- SQL DRAWER -->
+  <div class="drawer" id="drawer">
+    <div class="drawerPanel">
+      <div class="drawerHead">
+        <div>
+          <b>SQL Developer Console</b>
+          <span>Írd be a queryt → ellenőrzés → funkció felold</span>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button class="btn" id="resetBtn" title="Clear local storage + restart">Reset</button>
+          <button class="btn" id="closeSqlBtn">Bezár</button>
+        </div>
+      </div>
+
+      <div class="drawerContent">
+        <div class="unlockGrid">
+          <!-- 0 DB -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>0) CREATE DATABASE</h4>
+                <p>Adatbázis létrehozása</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateDb"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('db')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlDb" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('db')">Ellenőrzés</button>
+              <p class="hint">Tipp: legyen benne <code>pizzago</code></p>
+            </div>
+          </div>
+
+          <!-- 1 users table -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>1) CREATE TABLE users</h4>
+                <p>Felhasználók tábla</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateUsers"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('users')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlUsers" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('usersTable')">Ellenőrzés</button>
+              <p class="hint">Tipp: legyen benne <code>PRIMARY KEY</code></p>
+            </div>
+          </div>
+
+          <!-- 2 register insert -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>2) INSERT INTO users</h4>
+                <p>Regisztráció feloldása</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateRegister"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('insertUsers')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlRegister" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('registerInsert')">Ellenőrzés</button>
+              <p class="hint">INSERT unlock → Regisztráció gomb működik</p>
+            </div>
+          </div>
+
+          <!-- 3 login select -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>3) SELECT user (login)</h4>
+                <p>Login feloldása</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateLogin"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('selectUsers')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlLogin" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('loginSelect')">Ellenőrzés</button>
+              <p class="hint">SELECT unlock → Login gomb működik</p>
+            </div>
+          </div>
+
+          <!-- 4 pizzas table -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>4) CREATE TABLE pizzas</h4>
+                <p>Pizza tábla</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="statePizzasTable"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('pizzasTable')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlPizzasTable" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('pizzasTable')">Ellenőrzés</button>
+              <p class="hint">PK + name + price</p>
+            </div>
+          </div>
+
+          <!-- 5 orders table -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>5) CREATE TABLE orders</h4>
+                <p>Rendelések tábla (FK-k)</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateOrdersTable"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('ordersTable')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlOrdersTable" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('ordersTable')">Ellenőrzés</button>
+              <p class="hint">FOREIGN KEY + user_id + pizza_id</p>
+            </div>
+          </div>
+
+          <!-- 6 insert pizza -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>6) INSERT INTO pizzas</h4>
+                <p>Legalább 1 pizza beszúrása</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateInsertPizza"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('insertPizza')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlInsertPizza" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('pizzaInsert')">Ellenőrzés</button>
+              <p class="hint">INSERT unlock → Admin pizza hozzáadás él</p>
+            </div>
+          </div>
+
+          <!-- 7 select pizzas list -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>7) SELECT pizza lista</h4>
+                <p>Menü “életre keltése”</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateSelectPizzas"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('selectPizzas')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlSelectPizzas" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('pizzasSelect')">Ellenőrzés</button>
+              <p class="hint">SELECT unlock → Lista él</p>
+            </div>
+          </div>
+
+          <!-- 8 search / filter (LIKE) -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>8) Keresés / szűrés (LIKE)</h4>
+                <p>Inputok aktiválása (LIKE kötelező)</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateSearchLike"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('searchLike')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlSearchLike" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('searchLike')">Ellenőrzés</button>
+              <p class="hint">LIKE unlock → keresés + veg</p>
+            </div>
+          </div>
+
+          <!-- 9 order by -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>9) Rendezés (ORDER BY)</h4>
+                <p>Rendezési dropdown aktiválása</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateOrderBy"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('orderBy')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlOrderBy" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('orderBy')">Ellenőrzés</button>
+              <p class="hint">ORDER BY unlock → rendezés</p>
+            </div>
+          </div>
+
+          <!-- 10 place order -->
+          <div class="task">
+            <div class="taskTop">
+              <div>
+                <h4>10) INSERT INTO orders</h4>
+                <p>Megrendelés feloldása</p>
+              </div>
+
+              <div class="helpWrap">
+                <div class="state" id="stateOrdersInsert"><span class="dot"></span> Locked</div>
+                <button class="helpIcon" type="button" onclick="showHelp('insertOrders')">?</button>
+              </div>
+            </div>
+
+            <textarea id="sqlOrdersInsert" placeholder="Írd be a saját SQL megoldásodat…"></textarea>
+            <div class="taskFoot">
+              <button class="btn btnPrimary" onclick="checkUnlock('ordersInsert')">Ellenőrzés</button>
+              <p class="hint">INSERT unlock → Checkout működik</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="task" style="background: rgba(0,0,0,.14); margin-top:12px;">
+          <div class="taskTop">
+            <div>
+              <h4>🔒 JOIN teaser (későbbi óra)</h4>
+              <p>Rendelések + pizzák összekapcsolása majd JOIN-nal lesz igazi.</p>
+            </div>
+            <div class="state" style="opacity:.9;"><span class="dot"></span> Disabled</div>
+          </div>
+          <p class="hint">Most direkt letiltva – később jön 😄</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HELP MODAL -->
+  <div id="helpOverlay" class="helpOverlay hidden" onclick="closeHelp(event)">
+    <div class="helpModal" onclick="event.stopPropagation()">
+      <div class="helpHead">
+        <div>
+          <b id="helpTitle">SQL segítség</b>
+          <span id="helpSubtitle">Általános sablon (nem megoldás)</span>
+        </div>
+        <button class="btn" onclick="hideHelp()">Bezár</button>
+      </div>
+
+      <div class="helpBody">
+        <div class="helpCode" id="helpCode"></div>
+        <div class="helpNote" id="helpNote"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ===========================
+   DATA + LOCAL STORAGE
+=========================== */
+const LS_KEY = "pizzago_sqlunlock_fullflow_v3";
+
+let users = [];
+let pizzas = [];
+let orders = [];
+let cart = [];
+let currentUser = null;
+
+const unlock = {
+  db:false,
+  usersTable:false,
+  registerInsert:false,
+  loginSelect:false,
+  pizzasTable:false,
+  ordersTable:false,
+  pizzaInsert:false,
+  pizzasSelect:false,
+  searchLike:false,
+  orderBy:false,
+  ordersInsert:false
+};
+const TOTAL_STEPS = 11;
+
+function loadProgress(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const data = JSON.parse(raw);
+
+    if(data?.unlock){
+      Object.keys(unlock).forEach(k => {
+        if(typeof data.unlock[k] === "boolean") unlock[k] = data.unlock[k];
+      });
+    }
+    if(Array.isArray(data.users)) users = data.users;
+    if(Array.isArray(data.pizzas)) pizzas = data.pizzas;
+    if(Array.isArray(data.orders)) orders = data.orders;
+    if(Array.isArray(data.cart)) cart = data.cart;
+    currentUser = data.currentUser || null;
+  }catch(e){}
+}
+
+function saveProgress(){
+  localStorage.setItem(LS_KEY, JSON.stringify({
+    unlock, users, pizzas, orders, cart, currentUser
+  }));
+}
+
+function clearProgress(){
+  localStorage.removeItem(LS_KEY);
+  location.reload();
+}
+
+/* ===========================
+   UI HOOKS
+=========================== */
+const topbar = document.getElementById("topbar");
+
+const screenDb = document.getElementById("screenDb");
+const screenAuth = document.getElementById("screenAuth");
+const screenSchema = document.getElementById("screenSchema");
+const appArea = document.getElementById("appArea");
+
+const openSqlBtn = document.getElementById("openSqlBtn");
+const dbOpenSql = document.getElementById("dbOpenSql");
+const authOpenSql1 = document.getElementById("authOpenSql1");
+const authOpenSql2 = document.getElementById("authOpenSql2");
+const schemaOpenSql = document.getElementById("schemaOpenSql");
+const appOpenSql3 = document.getElementById("appOpenSql3");
+const appAdminOpenSql = document.getElementById("appAdminOpenSql");
+const scrim = document.getElementById("scrim");
+
+const drawer = document.getElementById("drawer");
+const closeSqlBtn = document.getElementById("closeSqlBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+/* KPIs */
+const kpiUnlocked = document.getElementById("kpiUnlocked");
+const kpiPizzas = document.getElementById("kpiPizzas");
+const kpiUser = document.getElementById("kpiUser");
+
+/* Auth tabs */
+const tabRegister = document.getElementById("tabRegister");
+const tabLogin = document.getElementById("tabLogin");
+const registerPanel = document.getElementById("registerPanel");
+const loginPanel = document.getElementById("loginPanel");
+const authProgressText = document.getElementById("authProgressText");
+
+const regName = document.getElementById("regName");
+const regEmail = document.getElementById("regEmail");
+const regPass = document.getElementById("regPass");
+const regPass2 = document.getElementById("regPass2");
+const doRegisterBtn = document.getElementById("doRegisterBtn");
+
+const loginEmail = document.getElementById("loginEmail");
+const loginPass = document.getElementById("loginPass");
+const doLoginBtn = document.getElementById("doLoginBtn");
+
+const registerStateTxt = document.getElementById("registerStateTxt");
+const loginStateTxt = document.getElementById("loginStateTxt");
+
+/* Schema admin insert */
+const adminPizzaName = document.getElementById("adminPizzaName");
+const adminPizzaPrice = document.getElementById("adminPizzaPrice");
+const adminPizzaDesc = document.getElementById("adminPizzaDesc");
+const adminPizzaVeg = document.getElementById("adminPizzaVeg");
+const adminAddPizzaBtn = document.getElementById("adminAddPizzaBtn");
+const pizzaInsertState = document.getElementById("pizzaInsertState");
+const schemaPizzaCount = document.getElementById("schemaPizzaCount");
+
+/* App admin insert */
+const appPizzaInsertState = document.getElementById("appPizzaInsertState");
+const appAdminPizzaName = document.getElementById("appAdminPizzaName");
+const appAdminPizzaPrice = document.getElementById("appAdminPizzaPrice");
+const appAdminPizzaDesc = document.getElementById("appAdminPizzaDesc");
+const appAdminPizzaVeg = document.getElementById("appAdminPizzaVeg");
+const appAdminAddPizzaBtn = document.getElementById("appAdminAddPizzaBtn");
+
+/* App */
+const appHintText = document.getElementById("appHintText");
+const menuGrid = document.getElementById("menuGrid");
+const searchInput = document.getElementById("searchInput");
+const vegToggle = document.getElementById("vegToggle");
+const vegState = document.getElementById("vegState");
+const sortSelect = document.getElementById("sortSelect");
+
+const cartBody = document.getElementById("cartBody");
+const cartEmpty = document.getElementById("cartEmpty");
+const cartCount = document.getElementById("cartCount");
+const cartTotal = document.getElementById("cartTotal");
+const checkoutBtn = document.getElementById("checkoutBtn");
+
+/* Console states */
+const stateDb = document.getElementById("stateDb");
+const stateUsers = document.getElementById("stateUsers");
+const stateRegister = document.getElementById("stateRegister");
+const stateLogin = document.getElementById("stateLogin");
+const statePizzasTable = document.getElementById("statePizzasTable");
+const stateOrdersTable = document.getElementById("stateOrdersTable");
+const stateInsertPizza = document.getElementById("stateInsertPizza");
+const stateSelectPizzas = document.getElementById("stateSelectPizzas");
+const stateSearchLike = document.getElementById("stateSearchLike");
+const stateOrderBy = document.getElementById("stateOrderBy");
+const stateOrdersInsert = document.getElementById("stateOrdersInsert");
+
+/* ===========================
+   DRAWER
+=========================== */
+function openDrawer(){
+  drawer.classList.add("open");
+  scrim.classList.remove("hidden");
+}
+function closeDrawer(){
+  drawer.classList.remove("open");
+  scrim.classList.add("hidden");
+}
+
+dbOpenSql.onclick = openDrawer;
+authOpenSql1.onclick = openDrawer;
+authOpenSql2.onclick = openDrawer;
+schemaOpenSql.onclick = openDrawer;
+appOpenSql3.onclick = openDrawer;
+appAdminOpenSql.onclick = openDrawer;
+openSqlBtn.onclick = openDrawer;
+closeSqlBtn.onclick = closeDrawer;
+
+resetBtn.onclick = () => {
+  toast("warn","Reset","LocalStorage törölve, indulás elölről.");
+  setTimeout(clearProgress, 600);
+};
+
+/* ===========================
+   FLOW VISIBILITY
+=========================== */
+function refreshFlow(){
+  if(!unlock.db){
+    topbar.classList.add("hidden");
+    screenDb.classList.remove("hidden");
+    screenAuth.classList.add("hidden");
+    screenSchema.classList.add("hidden");
+    appArea.classList.add("hidden");
+    return;
+  }
+
+  if(!currentUser){
+    topbar.classList.add("hidden");
+    screenDb.classList.add("hidden");
+    screenAuth.classList.remove("hidden");
+    screenSchema.classList.add("hidden");
+    appArea.classList.add("hidden");
+    updateAuthText();
+    return;
+  }
+
+  const schemaReady = unlock.pizzasTable && unlock.ordersTable && pizzas.length > 0;
+  if(!schemaReady){
+    topbar.classList.add("hidden");
+    screenDb.classList.add("hidden");
+    screenAuth.classList.add("hidden");
+    screenSchema.classList.remove("hidden");
+    appArea.classList.add("hidden");
+    updateSchemaUI();
+    return;
+  }
+
+  topbar.classList.remove("hidden");
+  screenDb.classList.add("hidden");
+  screenAuth.classList.add("hidden");
+  screenSchema.classList.add("hidden");
+  appArea.classList.remove("hidden");
+  updateTopbar();
+  updateAppUI();
+}
+
+function updateAuthText(){
+  if(!unlock.usersTable){
+    authProgressText.textContent = "Következő lépés: CREATE TABLE users";
+  }else if(!unlock.registerInsert){
+    authProgressText.textContent = "Most: INSERT INTO users (regisztráció feloldása)";
+  }else if(!unlock.loginSelect){
+    authProgressText.textContent = "Most: SELECT ... FROM users WHERE ... (login feloldása)";
+  }else{
+    authProgressText.textContent = "Auth unlock kész ✅ Most már beléphetsz!";
+  }
+
+  registerStateTxt.textContent = unlock.registerInsert ? "Unlocked ✅" : "Locked (INSERT)";
+  loginStateTxt.textContent = unlock.loginSelect ? "Unlocked ✅" : "Locked (SELECT)";
+}
+
+function updateSchemaUI(){
+  schemaPizzaCount.textContent = String(pizzas.length);
+  pizzaInsertState.textContent = unlock.pizzaInsert ? "Unlocked ✅" : "Locked";
+}
+
+/* ===========================
+   TABS
+=========================== */
+tabRegister.onclick = () => {
+  tabRegister.classList.add("active");
+  tabLogin.classList.remove("active");
+  registerPanel.classList.remove("hidden");
+  loginPanel.classList.add("hidden");
+};
+tabLogin.onclick = () => {
+  tabLogin.classList.add("active");
+  tabRegister.classList.remove("active");
+  loginPanel.classList.remove("hidden");
+  registerPanel.classList.add("hidden");
+};
+
+/* ===========================
+   AUTH ACTIONS
+=========================== */
+doRegisterBtn.onclick = () => {
+  if(!unlock.usersTable){
+    toast("warn","Locked","Előbb CREATE TABLE users kell.");
+    openDrawer();
+    return;
+  }
+  if(!unlock.registerInsert){
+    toast("warn","Regisztráció Locked","Oldd fel INSERT INTO users SQL-lel.");
+    openDrawer();
+    return;
+  }
+
+  const name = regName.value.trim();
+  const email = regEmail.value.trim().toLowerCase();
+  const p1 = regPass.value.trim();
+  const p2 = regPass2.value.trim();
+
+  if(!name || !email || !p1 || !p2){
+    toast("bad","Hiányzó adat","Tölts ki minden mezőt.");
+    return;
+  }
+  if(p1 !== p2){
+    toast("bad","Nem egyezik","A két jelszó nem ugyanaz.");
+    return;
+  }
+  if(users.some(u => u.email === email)){
+    toast("bad","Már létezik","Ezzel az emaillel már van felhasználó.");
+    return;
+  }
+
+  const id = users.length ? Math.max(...users.map(u=>u.id))+1 : 1;
+  users.push({ id, name, email, pass: p1 });
+
+  saveProgress();
+  toast("good","Sikeres regisztráció","Most próbáld meg a login-t!");
+  tabLogin.click();
+  loginEmail.value = email;
+  loginPass.value = p1;
+};
+
+doLoginBtn.onclick = () => {
+  if(!unlock.loginSelect){
+    toast("warn","Login Locked","Oldd fel a SELECT login queryt.");
+    openDrawer();
+    return;
+  }
+  const email = loginEmail.value.trim().toLowerCase();
+  const pass = loginPass.value.trim();
+
+  if(!email || !pass){
+    toast("bad","Hiányzó adat","Írj be emailt és jelszót.");
+    return;
+  }
+
+  const u = users.find(x => x.email === email && x.pass === pass);
+  if(!u){
+    toast("bad","Nincs ilyen user","Ellenőrizd az email/jelszó párost.");
+    return;
+  }
+
+  currentUser = { id: u.id, name: u.name, email: u.email };
+  saveProgress();
+  toast("good","Belépve!","Most jön a pizzas + orders tábla.");
+  refreshFlow();
+};
+
+/* ===========================
+   PIZZA INSERT (shared)
+=========================== */
+function insertPizzaFromInputs(name, price, desc, vegetarian){
+  const id = pizzas.length ? Math.max(...pizzas.map(p=>p.id))+1 : 1;
+  const emoji = vegetarian ? "🥬" : "🍕";
+  pizzas.push({ id, name, price, desc, vegetarian, emoji });
+  saveProgress();
+  updateStates();
+  renderMenu();
+  renderCart();
+  toast("good","Pizza beszúrva","A lista frissült.");
+}
+
+adminAddPizzaBtn.onclick = () => {
+  if(!unlock.pizzasTable || !unlock.ordersTable){
+    toast("warn","Locked","Előbb: CREATE TABLE pizzas + orders.");
+    openDrawer();
+    return;
+  }
+  if(!unlock.pizzaInsert){
+    toast("warn","INSERT Locked","Oldd fel: INSERT INTO pizzas.");
+    openDrawer();
+    return;
+  }
+
+  const name = adminPizzaName.value.trim();
+  const price = Number(adminPizzaPrice.value);
+  const desc = adminPizzaDesc.value.trim();
+  const vegetarian = (adminPizzaVeg.value === "true");
+
+  if(!name || !desc || !price || price < 1){
+    toast("bad","Hiányzó adat","Adj meg nevet, leírást és árat.");
+    return;
+  }
+
+  insertPizzaFromInputs(name, price, desc, vegetarian);
+
+  adminPizzaName.value = "";
+  adminPizzaPrice.value = "";
+  adminPizzaDesc.value = "";
+  adminPizzaVeg.value = "true";
+
+  refreshFlow(); // továbbléphet appba ha megvan legalább 1
+};
+
+appAdminAddPizzaBtn.onclick = () => {
+  if(!unlock.pizzaInsert){
+    toast("warn","INSERT Locked","Oldd fel: INSERT INTO pizzas.");
+    openDrawer();
+    return;
+  }
+
+  const name = appAdminPizzaName.value.trim();
+  const price = Number(appAdminPizzaPrice.value);
+  const desc = appAdminPizzaDesc.value.trim();
+  const vegetarian = (appAdminPizzaVeg.value === "true");
+
+  if(!name || !desc || !price || price < 1){
+    toast("bad","Hiányzó adat","Adj meg nevet, leírást és árat.");
+    return;
+  }
+
+  insertPizzaFromInputs(name, price, desc, vegetarian);
+
+  appAdminPizzaName.value = "";
+  appAdminPizzaPrice.value = "";
+  appAdminPizzaDesc.value = "";
+  appAdminPizzaVeg.value = "false";
+};
+
+/* ===========================
+   APP UI
+=========================== */
+let vegOnly = false;
+
+vegToggle.onclick = () => {
+  if(!unlock.searchLike){
+    toast("warn","Locked","Szűrés/kereséshez oldd fel a LIKE lépést.");
+    openDrawer();
+    return;
+  }
+  vegOnly = !vegOnly;
+  vegState.textContent = vegOnly ? "ON" : "OFF";
+  renderMenu();
+};
+
+sortSelect.onchange = () => {
+  if(!unlock.orderBy){
+    toast("warn","Locked","Rendezéshez oldd fel az ORDER BY lépést.");
+    sortSelect.value = "none";
+    openDrawer();
+    return;
+  }
+  renderMenu();
+};
+
+searchInput.oninput = () => {
+  if(!unlock.searchLike) return;
+  renderMenu();
+};
+
+checkoutBtn.onclick = () => {
+  if(!unlock.ordersInsert){
+    toast("warn","Rendelés Locked","Oldd fel: INSERT INTO orders.");
+    openDrawer();
+    return;
+  }
+  if(!cart.length){
+    toast("warn","Üres kosár","Tegyél valamit a kosárba 🙂");
+    return;
+  }
+
+  cart.forEach(item => {
+    orders.push({
+      id: orders.length ? Math.max(...orders.map(o=>o.id))+1 : 1,
+      user_id: currentUser.id,
+      pizza_id: item.pizzaId,
+      qty: item.qty,
+      created_at: new Date().toISOString()
+    });
+  });
+
+  cart = [];
+  saveProgress();
+  renderCart();
+
+  toast("good","Megrendelve!","INSERT INTO orders sikeresen szimulálva.");
+};
+
+function renderMenu(){
+  menuGrid.innerHTML = "";
+
+  if(!unlock.pizzasSelect){
+    pizzas.slice(0, Math.min(4, pizzas.length)).forEach(p => {
+      menuGrid.appendChild(buildPizzaCard(p, true));
+    });
+
+    if(pizzas.length === 0){
+      const fake = [
+        {id:1,name:"(nincs még pizza)",price:0,desc:"Előbb INSERT INTO pizzas",vegetarian:true,emoji:"🔒"},
+        {id:2,name:"(nincs még pizza)",price:0,desc:"Majd SELECT pizza lista",vegetarian:true,emoji:"🔒"},
+      ];
+      fake.forEach(p => menuGrid.appendChild(buildPizzaCard(p, true)));
+    }
+    return;
+  }
+
+  const list = getFilteredSorted();
+  list.forEach(p => menuGrid.appendChild(buildPizzaCard(p, false)));
+}
+
+function getFilteredSorted(){
+  let list = [...pizzas];
+
+  if(unlock.searchLike){
+    const q = searchInput.value.trim().toLowerCase();
+    if(q){
+      list = list.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.desc.toLowerCase().includes(q)
+      );
+    }
+    if(vegOnly) list = list.filter(p => p.vegetarian);
+  }
+
+  if(unlock.orderBy){
+    if(sortSelect.value === "price_asc") list.sort((a,b)=>a.price-b.price);
+    if(sortSelect.value === "price_desc") list.sort((a,b)=>b.price-a.price);
+  }
+
+  return list;
+}
+
+function buildPizzaCard(p, locked){
+  const card = document.createElement("div");
+  card.className = "pizzaCard" + (locked ? " locked" : "");
+
+  const typeBadge = p.vegetarian
+    ? `<div class="badge"><span class="dot" style="background:rgba(34,197,94,.85); box-shadow:0 0 0 4px rgba(34,197,94,.12)"></span><strong>Veg</strong></div>`
+    : `<div class="badge"><span class="dot" style="background:rgba(255,77,77,.85); box-shadow:0 0 0 4px rgba(255,77,77,.12)"></span><strong>Meat</strong></div>`;
+
+  card.innerHTML = `
+    <div class="pizzaTop">
+      <div style="display:flex; gap:14px;">
+        <div class="pizzaArt">${escapeHtml(p.emoji || "🍕")}</div>
+        <div>
+          <p class="pizzaName">${escapeHtml(p.name)}</p>
+          <p class="pizzaDesc">${escapeHtml(p.desc)}</p>
+          <div class="badgeRow">
+            ${typeBadge}
+            <div class="badge">
+              <span class="dot" style="background:rgba(255,204,102,.9); box-shadow:0 0 0 4px rgba(255,204,102,.12)"></span>
+              <strong>${p.price ? (p.price + " RON") : "Locked"}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="priceRow">
+      <div class="price">${p.price ? escapeHtml(p.price) : "—"} <span>${p.price ? "RON" : ""}</span></div>
+      <button class="addBtn ${(!locked && unlock.ordersInsert) ? "good" : ""}">
+        + Add to cart
+      </button>
+    </div>
+
+    <div class="lockedOverlay">
+      <div class="lockBox">
+        <b>🔒 Menü Locked</b>
+        <span>Oldd fel a pizza listát: SELECT pizzas</span>
+      </div>
+    </div>
+  `;
+
+  const addBtn = card.querySelector(".addBtn");
+  addBtn.onclick = (e) => {
+    e.stopPropagation();
+
+    if(!unlock.pizzasSelect){
+      toast("warn","Locked","Először: SELECT pizza lista.");
+      openDrawer();
+      return;
+    }
+    if(!unlock.ordersInsert){
+      toast("warn","Locked","Rendeléshez: INSERT INTO orders.");
+      openDrawer();
+      return;
+    }
+    if(locked) return;
+
+    addToCart(p.id);
+  };
+
+  if(locked) card.onclick = () => openDrawer();
+  return card;
+}
+
+/* Cart */
+function addToCart(pizzaId){
+  const existing = cart.find(i => i.pizzaId === pizzaId);
+  if(existing) existing.qty += 1;
+  else cart.push({ pizzaId, qty: 1 });
+
+  toast("good","Kosárba rakva","Pizza hozzáadva.");
+  saveProgress();
+  renderCart();
+}
+
+function incQty(pizzaId){
+  const item = cart.find(i => i.pizzaId === pizzaId);
+  if(!item) return;
+  item.qty += 1;
+  saveProgress();
+  renderCart();
+}
+function decQty(pizzaId){
+  const item = cart.find(i => i.pizzaId === pizzaId);
+  if(!item) return;
+  item.qty -= 1;
+  if(item.qty <= 0) cart = cart.filter(i => i.pizzaId !== pizzaId);
+  saveProgress();
+  renderCart();
+}
+
+function renderCart(){
+  cartBody.innerHTML = "";
+  let total = 0;
+  let count = 0;
+
+  if(cart.length === 0){
+    cartBody.appendChild(cartEmpty);
+  }else{
+    cart.forEach(item => {
+      const p = pizzas.find(x => x.id === item.pizzaId);
+      if(!p) return;
+
+      total += p.price * item.qty;
+      count += item.qty;
+
+      const row = document.createElement("div");
+      row.className = "cartItem";
+      row.innerHTML = `
+        <div>
+          <b>${escapeHtml(p.name)}</b>
+          <span>${escapeHtml(p.price)} RON × ${item.qty}</span>
+        </div>
+        <div class="qtyWrap">
+          <button class="qtyBtn">–</button>
+          <div class="qty">${item.qty}</div>
+          <button class="qtyBtn">+</button>
+        </div>
+      `;
+      row.querySelectorAll(".qtyBtn")[0].onclick = () => decQty(item.pizzaId);
+      row.querySelectorAll(".qtyBtn")[1].onclick = () => incQty(item.pizzaId);
+
+      cartBody.appendChild(row);
+    });
+  }
+
+  cartCount.textContent = String(count);
+  cartTotal.textContent = `${total} RON`;
+}
+
+/* ===========================
+   UNLOCK CHECKS (keyword)
+=========================== */
+function checkUnlock(step){
+  if(step === "db"){
+    const sql = (document.getElementById("sqlDb").value || "").toLowerCase();
+    if(hasAll(sql, ["create","database","pizzago"])){
+      unlock.db = true;
+      setState(stateDb, true);
+      toast("good","DB OK","Most jön a users tábla + regisztráció + login.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(!unlock.db){
+    toast("warn","Először DB","CREATE DATABASE nélkül nincs tovább.");
+    return;
+  }
+
+  if(step === "usersTable"){
+    const sql = (document.getElementById("sqlUsers").value || "").toLowerCase();
+    if(hasAll(sql, ["create table","users","primary key","id"])){
+      unlock.usersTable = true;
+      setState(stateUsers, true);
+      toast("good","users kész","Most oldd fel a regisztrációt (INSERT).");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(!unlock.usersTable){
+    toast("warn","Sorrend","Először CREATE TABLE users.");
+    return;
+  }
+
+  if(step === "registerInsert"){
+    const sql = (document.getElementById("sqlRegister").value || "").toLowerCase();
+    if(hasAll(sql, ["insert","into","users"])){
+      unlock.registerInsert = true;
+      setState(stateRegister, true);
+      toast("good","INSERT users OK","Regisztráció gomb feloldva.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(step === "loginSelect"){
+    const sql = (document.getElementById("sqlLogin").value || "").toLowerCase();
+    if(hasAll(sql, ["select","from","users","where"])){
+      unlock.loginSelect = true;
+      setState(stateLogin, true);
+      toast("good","SELECT login OK","Login gomb feloldva.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(step === "pizzasTable"){
+    const sql = (document.getElementById("sqlPizzasTable").value || "").toLowerCase();
+    if(hasAll(sql, ["create table","pizzas","primary key","id"]) && (sql.includes("name") && sql.includes("price"))){
+      unlock.pizzasTable = true;
+      setState(statePizzasTable, true);
+      toast("good","pizzas kész","Most jöhet az orders tábla.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(step === "ordersTable"){
+    const sql = (document.getElementById("sqlOrdersTable").value || "").toLowerCase();
+    if(hasAll(sql, ["create table","orders","primary key"]) && hasAll(sql, ["foreign key","user_id","pizza_id"])){
+      unlock.ordersTable = true;
+      setState(stateOrdersTable, true);
+      toast("good","orders kész","Most INSERT-elj legalább 1 pizzát.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(step === "pizzaInsert"){
+    const sql = (document.getElementById("sqlInsertPizza").value || "").toLowerCase();
+    if(hasAll(sql, ["insert","into","pizzas"])){
+      unlock.pizzaInsert = true;
+      setState(stateInsertPizza, true);
+      toast("good","INSERT pizzas OK","Admin beszúrás feloldva.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(step === "pizzasSelect"){
+    const sql = (document.getElementById("sqlSelectPizzas").value || "").toLowerCase();
+    if(hasAll(sql, ["select","from","pizzas"])){
+      unlock.pizzasSelect = true;
+      setState(stateSelectPizzas, true);
+      toast("good","SELECT OK","Pizza lista él.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(step === "searchLike"){
+    const sql = (document.getElementById("sqlSearchLike").value || "").toLowerCase();
+    if(hasAll(sql, ["select","from","pizzas"]) && sql.includes("like")){
+      unlock.searchLike = true;
+      setState(stateSearchLike, true);
+      toast("good","LIKE OK","Keresés + veg szűrés feloldva.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(step === "orderBy"){
+    const sql = (document.getElementById("sqlOrderBy").value || "").toLowerCase();
+    if(hasAll(sql, ["select","from","pizzas"]) && sql.includes("order by")){
+      unlock.orderBy = true;
+      setState(stateOrderBy, true);
+      toast("good","ORDER BY OK","Rendezés feloldva.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+
+  if(step === "ordersInsert"){
+    const sql = (document.getElementById("sqlOrdersInsert").value || "").toLowerCase();
+    if(hasAll(sql, ["insert","into","orders"])){
+      unlock.ordersInsert = true;
+      setState(stateOrdersInsert, true);
+      toast("good","Rendelés OK","Checkout feloldva.");
+      saveProgress();
+      refreshFlow();
+      updateStates();
+      return;
+    }
+    return fail();
+  }
+}
+
+function fail(){
+  toast("bad","Nem unlockolt…","A kulcsszavak még nem stimmelnek ehhez a lépéshez.");
+}
+
+function hasAll(text, arr){
+  return arr.every(k => text.includes(k));
+}
+
+function setState(el, ok){
+  if(!el) return;
+  if(ok){
+    el.classList.add("ok");
+    el.innerHTML = '<span class="dot"></span> Unlocked';
+  }else{
+    el.classList.remove("ok");
+    el.innerHTML = '<span class="dot"></span> Locked';
+  }
+}
+
+function updateStates(){
+  setState(stateDb, unlock.db);
+  setState(stateUsers, unlock.usersTable);
+  setState(stateRegister, unlock.registerInsert);
+  setState(stateLogin, unlock.loginSelect);
+  setState(statePizzasTable, unlock.pizzasTable);
+  setState(stateOrdersTable, unlock.ordersTable);
+  setState(stateInsertPizza, unlock.pizzaInsert);
+  setState(stateSelectPizzas, unlock.pizzasSelect);
+  setState(stateSearchLike, unlock.searchLike);
+  setState(stateOrderBy, unlock.orderBy);
+  setState(stateOrdersInsert, unlock.ordersInsert);
+
+  updateAuthText();
+  updateSchemaUI();
+  updateTopbar();
+
+  // app admin state label
+  appPizzaInsertState.textContent = unlock.pizzaInsert ? "Unlocked ✅" : "Locked";
+}
+
+function updateTopbar(){
+  const unlockedCount = Object.values(unlock).filter(Boolean).length;
+  kpiUnlocked.textContent = `${unlockedCount} / ${TOTAL_STEPS}`;
+  kpiPizzas.textContent = String(pizzas.length);
+  kpiUser.textContent = currentUser ? currentUser.name : "-";
+}
+
+function updateAppUI(){
+  renderMenu();
+  renderCart();
+
+  const lockedSearch = !unlock.searchLike;
+  searchInput.disabled = lockedSearch;
+  searchInput.placeholder = lockedSearch ? "Keresés… (LIKE unlock után)" : "Keresés…";
+  vegToggle.classList.toggle("lockedUI", lockedSearch);
+  vegState.textContent = lockedSearch ? "Locked" : (vegOnly ? "ON" : "OFF");
+
+  const lockedSort = !unlock.orderBy;
+  sortSelect.classList.toggle("lockedUI", lockedSort);
+  sortSelect.options[0].textContent = lockedSort ? "Rendezés: Locked" : "Rendezés: válassz";
+
+  // Admin panel (App) gombok
+  appAdminAddPizzaBtn.disabled = !unlock.pizzaInsert;
+  appAdminAddPizzaBtn.style.opacity = unlock.pizzaInsert ? "1" : ".65";
+
+  if(!unlock.pizzasSelect){
+    appHintText.textContent = "Oldd fel: SELECT ... FROM pizzas → különben a menü nem él.";
+  }else if(!unlock.searchLike){
+    appHintText.textContent = "Most oldd fel a keresést: SELECT + LIKE.";
+  }else if(!unlock.orderBy){
+    appHintText.textContent = "Most oldd fel a rendezést: SELECT + ORDER BY.";
+  }else if(!unlock.ordersInsert){
+    appHintText.textContent = "Utolsó lépés: INSERT INTO orders → rendelés feloldása.";
+  }else{
+    appHintText.textContent = "Minden alapfunkció feloldva ✅ Most lehet rendelni!";
+  }
+}
+
+/* ===========================
+   HELP MODAL (GENERAL)
+=========================== */
+const helpOverlay = document.getElementById("helpOverlay");
+const helpTitle = document.getElementById("helpTitle");
+const helpSubtitle = document.getElementById("helpSubtitle");
+const helpCode = document.getElementById("helpCode");
+const helpNote = document.getElementById("helpNote");
+
+function showHelp(type){
+  const createTableTemplate =
+`CREATE TABLE <tabla_nev> (
+  <oszlop1> <tipus> [PRIMARY KEY] [UNIQUE] [AUTO_INCREMENT] [NOT NULL] [DEFAULT],
+  <oszlop2> <tipus>,
+  ...,
+  FOREIGN KEY (<oszlop>) REFERENCES <tabla_nev>(<masik_tabla_oszlopa>)
+);`;
+
+  const map = {
+    db: {
+      title: "CREATE DATABASE – sablon",
+      subtitle: "Adatbázis létrehozása",
+      code: `CREATE DATABASE <adatbazis_nev>;`,
+      note: "Adj nevet az adatbázisnak. (Itt a feloldáshoz a 'pizzago' szót keressük.)"
+    },
+
+    users: {
+      title: "CREATE TABLE – sablon",
+      subtitle: "users tábla (mezők leírása)",
+      code: createTableTemplate,
+      note:
+`users tábla mezők (szövegesen):
+• id – egyedi azonosító (PRIMARY KEY)
+• name – felhasználó neve
+• email – email (egyedi)
+• password – jelszó (simán tárolva csak demo)
+
+Tipp: a feloldáshoz elég, ha van: users + id + PRIMARY KEY`
+    },
+
+    insertUsers: {
+      title: "INSERT – sablon",
+      subtitle: "Regisztráció (INSERT INTO users)",
+      code:
+`INSERT INTO users (<oszlop1>, <oszlop2>, <oszlop3>)
+VALUES (<ertek1>, <ertek2>, <ertek3>);`,
+      note:
+"Regisztráció = új rekord beszúrása. (pl. name, email, password)"
+    },
+
+    selectUsers: {
+      title: "SELECT – sablon",
+      subtitle: "Login (SELECT user a táblából)",
+      code:
+`SELECT <oszlopok>
+FROM users
+WHERE <feltetel>;`,
+      note:
+"A login során tipikusan email + password alapján keresünk."
+    },
+
+    pizzasTable: {
+      title: "CREATE TABLE – sablon",
+      subtitle: "pizzas tábla (mezők leírása)",
+      code: createTableTemplate,
+      note:
+`pizzas tábla mezők (szövegesen):
+• id – PRIMARY KEY
+• name – pizza neve
+• price – ár (szám)
+• vegetarian – logikai jelző
+• desc – rövid leírás`
+    },
+
+    ordersTable: {
+      title: "CREATE TABLE – sablon",
+      subtitle: "orders tábla (FK-k leírása)",
+      code: createTableTemplate,
+      note:
+`orders tábla mezők (szövegesen):
+• id – PRIMARY KEY
+• user_id – FOREIGN KEY → users.id
+• pizza_id – FOREIGN KEY → pizzas.id
+• qty – mennyiség
+• created_at – időpont (opcionális)`
+    },
+
+    insertPizza: {
+      title: "INSERT – sablon",
+      subtitle: "Pizza beszúrás (INSERT INTO pizzas)",
+      code:
+`INSERT INTO pizzas (<oszlop1>, <oszlop2>, <oszlop3>)
+VALUES (<ertek1>, <ertek2>, <ertek3>);`,
+      note:
+"Szúrj be legalább 1 pizzát (pl. name, price, desc, vegetarian)."
+    },
+
+    selectPizzas: {
+      title: "SELECT – sablon",
+      subtitle: "Pizza lista lekérdezése",
+      code:
+`SELECT <oszlopok>
+FROM pizzas;`,
+      note:
+"Ez adja a menü alapját. (Pl. SELECT * FROM pizzas)"
+    },
+
+    searchLike: {
+      title: "LIKE – sablon",
+      subtitle: "Keresés / szűrés (LIKE kötelező)",
+      code:
+`SELECT <oszlopok>
+FROM pizzas
+WHERE <oszlop> LIKE '%<minta>%';`,
+      note:
+"Didaktikai cél: itt most a LIKE a kötelező kulcsszó (keresés)."
+    },
+
+    orderBy: {
+      title: "ORDER BY – sablon",
+      subtitle: "Rendezés",
+      code:
+`SELECT <oszlopok>
+FROM pizzas
+ORDER BY <oszlop> ASC;`,
+      note:
+"Rendezéshez ORDER BY kell (ASC vagy DESC)."
+    },
+
+    insertOrders: {
+      title: "INSERT – sablon",
+      subtitle: "Megrendelés (INSERT INTO orders)",
+      code:
+`INSERT INTO orders (<oszlop1>, <oszlop2>, <oszlop3>)
+VALUES (<ertek1>, <ertek2>, <ertek3>);`,
+      note:
+"A rendelés = új rekord a orders táblába (user_id, pizza_id, qty)."
+    }
+  };
+
+  const item = map[type];
+  if(!item) return;
+
+  helpTitle.textContent = item.title;
+  helpSubtitle.textContent = item.subtitle;
+  helpCode.textContent = item.code;
+  helpNote.textContent = item.note;
+
+  helpOverlay.classList.remove("hidden");
+}
+
+function hideHelp(){ helpOverlay.classList.add("hidden"); }
+function closeHelp(e){ if(e.target === helpOverlay) hideHelp(); }
+
+/* ===========================
+   TOAST
+=========================== */
+function toast(type, title, msg){
+  const wrap = document.getElementById("toasts");
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+
+  const icon = type === "good" ? "✓" : (type === "bad" ? "!" : "i");
+
+  el.innerHTML = `
+    <div class="ico">${icon}</div>
+    <div class="txt">
+      <b>${escapeHtml(title)}</b>
+      <span>${escapeHtml(msg)}</span>
+    </div>
+  `;
+  wrap.appendChild(el);
+
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transform = "translateY(6px)";
+    setTimeout(() => el.remove(), 180);
+  }, 2200);
+}
+
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/* ===========================
+   INIT
+=========================== */
+loadProgress();
+
+// ha frissen indul és nincs pizza, akkor hagyjuk üresen — a diákok majd INSERT-elik
+updateStates();
+refreshFlow();
+
+/* tab init */
+tabRegister.click();
+
+/* locked buttons */
+function updateLockedInputs(){
+  doRegisterBtn.disabled = !unlock.registerInsert;
+  doLoginBtn.disabled = !unlock.loginSelect;
+
+  doRegisterBtn.style.opacity = unlock.registerInsert ? "1" : ".65";
+  doLoginBtn.style.opacity = unlock.loginSelect ? "1" : ".65";
+
+  adminAddPizzaBtn.disabled = !unlock.pizzaInsert;
+  adminAddPizzaBtn.style.opacity = unlock.pizzaInsert ? "1" : ".65";
+
+  appAdminAddPizzaBtn.disabled = !unlock.pizzaInsert;
+  appAdminAddPizzaBtn.style.opacity = unlock.pizzaInsert ? "1" : ".65";
+}
+updateLockedInputs();
+
+/* ensure after unlock refresh */
+const _oldRefreshFlow = refreshFlow;
+refreshFlow = function(){
+  _oldRefreshFlow();
+  updateLockedInputs();
+};
+</script>
+</body>
+</html>
