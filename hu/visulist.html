@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIZULIST - Egyszeresen láncolt lista vizualizáló</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --good: #059669;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --node-bg: #ffffff;
+      --node-border: #374151;
+      --highlight: #fef3c7;
+      --highlight-border: #f59e0b;
+      --head: #ecfdf5;
+      --head-border: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    header {
+      padding: 24px 18px 14px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+    }
+
+    header p {
+      margin: 0 auto;
+      max-width: 900px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    main {
+      width: min(1280px, calc(100% - 24px));
+      margin: 0 auto 32px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .controls {
+      padding: 18px;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 220px 220px 1fr;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .input-group label {
+      margin-top: 0;
+    }
+
+    .controls h2,
+    .visual h2,
+    .teacher h2 {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+    }
+
+    .button-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 0;
+    }
+
+    button {
+      border: 0;
+      border-radius: 11px;
+      padding: 11px 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      transition: transform 0.08s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button.secondary {
+      background: #4b5563;
+    }
+
+    button.success {
+      background: var(--good);
+    }
+
+    button.warning {
+      background: var(--warn);
+    }
+
+    button.ghost {
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    .note {
+      margin-top: 14px;
+      padding: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-light);
+      border-radius: 10px;
+      color: #1e3a8a;
+      font-size: 0.95rem;
+    }
+
+    .visual {
+      padding: 18px;
+      min-height: 560px;
+      overflow: hidden;
+    }
+
+    .status {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .status-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fafafa;
+    }
+
+    .status-card strong {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .status-card span {
+      font-family: "Courier New", monospace;
+      font-weight: 700;
+    }
+
+    .canvas {
+      min-height: 320px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 16px;
+      padding: 34px 18px;
+      overflow-x: auto;
+      background:
+        linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+        linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    .list-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: max-content;
+      padding: 8px;
+    }
+
+    .head-box {
+      border: 2px solid var(--head-border);
+      background: var(--head);
+      border-radius: 12px;
+      padding: 14px 16px;
+      text-align: center;
+      font-family: "Courier New", monospace;
+      font-weight: 700;
+      position: relative;
+      min-width: 86px;
+    }
+
+    .node {
+      display: flex;
+      align-items: stretch;
+      border: 3px solid var(--node-border);
+      background: var(--node-bg);
+      border-radius: 14px;
+      overflow: hidden;
+      min-width: 124px;
+      box-shadow: 0 7px 14px rgba(15, 23, 42, 0.1);
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .node.active {
+      background: var(--highlight);
+      border-color: var(--highlight-border);
+      transform: translateY(-8px);
+    }
+
+    .cell {
+      padding: 15px 12px;
+      text-align: center;
+      min-width: 58px;
+    }
+
+    .cell.info {
+      border-right: 2px solid var(--node-border);
+      font-weight: 800;
+      font-size: 1.25rem;
+    }
+
+    .cell.next {
+      font-family: "Courier New", monospace;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .arrow {
+      font-size: 2rem;
+      color: var(--accent);
+      font-weight: 800;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .null-box {
+      border: 2px solid #9ca3af;
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-family: "Courier New", monospace;
+      font-weight: 800;
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .empty-list {
+      font-size: 1.25rem;
+      font-family: "Courier New", monospace;
+      color: var(--muted);
+      padding: 16px;
+    }
+
+    .explanation {
+      margin-top: 16px;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      padding: 14px;
+      border-radius: 14px;
+    }
+
+    .explanation h3 {
+      margin: 0 0 8px;
+      color: #1e40af;
+      font-size: 1rem;
+    }
+
+    .explanation p {
+      margin: 0;
+    }
+
+    .code-box {
+      margin-top: 14px;
+      background: #111827;
+      color: #e5e7eb;
+      border-radius: 14px;
+      padding: 14px;
+      overflow-x: auto;
+      font-family: "Courier New", monospace;
+      font-size: 0.92rem;
+      white-space: pre;
+    }
+
+    .teacher {
+      grid-column: 1 / -1;
+      padding: 18px;
+    }
+
+    .teacher-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .mini-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fbfbfb;
+    }
+
+    .mini-card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .mini-card ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .mini-card li {
+      margin: 4px 0;
+    }
+
+    @media (max-width: 980px) {
+      .control-row {
+        grid-template-columns: 1fr;
+      }
+
+      .button-grid {
+        margin-top: 8px;
+      }
+
+      .status,
+      .teacher-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>VIZULIST</h1>
+    <p>
+      Egyszeresen láncolt lista vizualizáló.
+    </p>
+  </header>
+
+  <main>
+    <section class="controls">
+      <h2>Műveletek</h2>
+
+      <div class="control-row">
+        <div class="input-group">
+          <label for="valueInput">Új elem értéke</label>
+          <input id="valueInput" type="number" placeholder="pl. 12" />
+        </div>
+
+        <div class="input-group">
+          <label for="positionInput">Pozíció / sorszám</label>
+          <input id="positionInput" type="number" min="1" placeholder="pl. 2" />
+        </div>
+
+        <div class="button-grid">
+          <button onclick="insertBeginning()">Beszúrás elejére</button>
+          <button class="success" onclick="insertEnd()">Beszúrás végére</button>
+          <button class="warning" onclick="insertAfterPosition()">Beszúrás adott pozíció után</button>
+          <button class="ghost" onclick="traverseList()">Bejárás animálása</button>
+          <button class="secondary" onclick="loadExample()">Példalista betöltése</button>
+          <button class="danger" onclick="resetList()">Lista ürítése</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="visual">
+      <h2>Vizuális modell</h2>
+
+      <div class="status">
+        <div class="status-card">
+          <strong>Lista állapota</strong>
+          <span id="listState">fej = NULL</span>
+        </div>
+        <div class="status-card">
+          <strong>Elemek száma</strong>
+          <span id="listSize">0</span>
+        </div>
+        <div class="status-card">
+          <strong>Aktuális művelet</strong>
+          <span id="operationState">nincs</span>
+        </div>
+      </div>
+
+      <div class="canvas" id="canvas">
+        <div class="list-row" id="listRow"></div>
+      </div>
+
+      <div class="explanation">
+        <h3>Magyarázat</h3>
+        <p id="explanationText">
+          A lista üres. Ilyenkor a <code>fej</code> mutató értéke <code>NULL</code>.
+        </p>
+      </div>
+
+      <div class="code-box" id="codeBox">nod *fej = NULL;</div>
+    </section>
+  </main>
+
+  <script>
+    let list = [];
+    let activeIndex = -1;
+
+    const valueInput = document.getElementById("valueInput");
+    const positionInput = document.getElementById("positionInput");
+    const listRow = document.getElementById("listRow");
+    const explanationText = document.getElementById("explanationText");
+    const codeBox = document.getElementById("codeBox");
+    const listState = document.getElementById("listState");
+    const listSize = document.getElementById("listSize");
+    const operationState = document.getElementById("operationState");
+
+    function getValue() {
+      const value = valueInput.value.trim();
+      if (value === "") {
+        alert("Adj meg egy értéket az új elemhez!");
+        return null;
+      }
+      return Number(value);
+    }
+
+    function getPosition() {
+      const position = Number(positionInput.value);
+      if (!Number.isInteger(position) || position < 1) {
+        alert("Adj meg egy pozitív egész pozíciót!");
+        return null;
+      }
+      return position;
+    }
+
+    function render() {
+      listRow.innerHTML = "";
+
+      if (list.length === 0) {
+        listRow.innerHTML = '<div class="empty-list">fej → NULL</div>';
+        listState.textContent = "fej = NULL";
+        listSize.textContent = "0";
+        return;
+      }
+
+      const head = document.createElement("div");
+      head.className = "head-box";
+      head.textContent = "fej";
+      listRow.appendChild(head);
+
+      const headArrow = document.createElement("div");
+      headArrow.className = "arrow";
+      headArrow.textContent = "→";
+      listRow.appendChild(headArrow);
+
+      list.forEach((value, index) => {
+        const node = document.createElement("div");
+        node.className = "node" + (index === activeIndex ? " active" : "");
+        node.innerHTML = `
+          <div class="cell info">${value}</div>
+          <div class="cell next">kov</div>
+        `;
+        listRow.appendChild(node);
+
+        const arrow = document.createElement("div");
+        arrow.className = "arrow";
+        arrow.textContent = "→";
+        listRow.appendChild(arrow);
+      });
+
+      const nullBox = document.createElement("div");
+      nullBox.className = "null-box";
+      nullBox.textContent = "NULL";
+      listRow.appendChild(nullBox);
+
+      listState.textContent = "fej → első elem";
+      listSize.textContent = String(list.length);
+    }
+
+    function setExplanation(text, code, operation) {
+      explanationText.innerHTML = text;
+      codeBox.textContent = code;
+      operationState.textContent = operation;
+    }
+
+    function clearInputs() {
+      valueInput.value = "";
+      valueInput.focus();
+    }
+
+    function insertBeginning() {
+      const value = getValue();
+      if (value === null) return;
+
+      list.unshift(value);
+      activeIndex = 0;
+      render();
+
+      setExplanation(
+        `Az új csomópont a lista elejére került. Az új elem <code>kov</code> mezője a régi első elemre mutat, majd a <code>fej</code> az új elemre áll.`,
+`void beszuras_eleje(nod *&fej, int val)
+{
+    nod *uj = new nod;
+    uj->adat = val;
+    uj->kov = fej;
+    fej = uj;
+}`,
+        "beszúrás elejére"
+      );
+
+      clearInputs();
+    }
+
+    function insertEnd() {
+      const value = getValue();
+      if (value === null) return;
+
+      list.push(value);
+      activeIndex = list.length - 1;
+      render();
+
+      setExplanation(
+        `Az új csomópont a lista végére került. Ha a lista üres volt, akkor a <code>fej</code> az új elemre mutat. Ha nem volt üres, akkor az eddigi utolsó elem <code>kov</code> mezője mutat az új csomópontra.`,
+`void beszuras_vege(nod *&fej, int val)
+{
+    nod *uj = new nod;
+    uj->adat = val;
+    uj->kov = NULL;
+
+    if (fej == NULL)
+        fej = uj;
+    else {
+        nod *p = fej;
+        while (p->kov != NULL)
+            p = p->kov;
+        p->kov = uj;
+    }
+}`,
+        "beszúrás végére"
+      );
+
+      clearInputs();
+    }
+
+    function insertAfterPosition() {
+      const value = getValue();
+      if (value === null) return;
+
+      const position = getPosition();
+      if (position === null) return;
+
+      if (list.length === 0) {
+        alert("A lista üres. Előbb szúrj be legalább egy elemet!");
+        return;
+      }
+
+      if (position > list.length) {
+        alert("Nincs ilyen pozíció a listában!");
+        return;
+      }
+
+      list.splice(position, 0, value);
+      activeIndex = position;
+      render();
+
+      setExplanation(
+        `Az új elem a(z) <strong>${position}.</strong> pozícióban levő csomópont után került. A csomópontok nem mozdultak el, csak a kapcsolatok változtak.`,
+`void beszuras_utan(nod *elem, int val)
+{
+    if (elem == NULL) return;
+
+    nod *uj = new nod;
+    uj->adat = val;
+    uj->kov = elem->kov;
+    elem->kov = uj;
+}`,
+        "beszúrás középre"
+      );
+
+      clearInputs();
+    }
+
+    async function traverseList() {
+      if (list.length === 0) {
+        setExplanation(
+          `A lista üres, ezért nincs mit bejárni. A <code>fej</code> értéke <code>NULL</code>.`,
+`void bejaras(nod *fej)
+{
+    nod *p = fej;
+    while (p != NULL) {
+        cout << p->adat << " ";
+        p = p->kov;
+    }
+}`,
+          "bejárás"
+        );
+        return;
+      }
+
+      setExplanation(
+        `A bejárás a <code>fej</code> által mutatott első csomóponttól indul. A segédmutató sorban végighalad: <code>p = p-&gt;kov</code>.`,
+`void bejaras(nod *fej)
+{
+    nod *p = fej;
+    while (p != NULL) {
+        cout << p->adat << " ";
+        p = p->kov;
+    }
+}`,
+        "bejárás"
+      );
+
+      for (let i = 0; i < list.length; i++) {
+        activeIndex = i;
+        render();
+        await sleep(850);
+      }
+
+      activeIndex = -1;
+      render();
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function resetList() {
+      list = [];
+      activeIndex = -1;
+      render();
+      setExplanation(
+        `A lista üres. Ilyenkor a <code>fej</code> mutató értéke <code>NULL</code>.`,
+`nod *fej = NULL;`,
+        "lista ürítése"
+      );
+      valueInput.focus();
+    }
+
+    function loadExample() {
+      list = [7, 12, 4];
+      activeIndex = -1;
+      render();
+      setExplanation(
+        `Betöltöttünk egy példalistát. Figyeld meg, hogy a logikai sorrendet a nyilak adják, nem az, hogy a csomópontok hol lennének a memóriában.`,
+`struct nod {
+    int adat;
+    nod *kov;
+};
+
+nod *fej = NULL;`,
+        "példalista"
+      );
+    }
+
+    render();
+  </script>
+</body>
+</html>
