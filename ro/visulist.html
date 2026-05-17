@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIZULIST - Vizualizator pentru lista simplu înlănțuită</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --good: #059669;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --node-bg: #ffffff;
+      --node-border: #374151;
+      --highlight: #fef3c7;
+      --highlight-border: #f59e0b;
+      --head: #ecfdf5;
+      --head-border: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    header {
+      padding: 24px 18px 14px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+    }
+
+    header p {
+      margin: 0 auto;
+      max-width: 900px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    main {
+      width: min(1280px, calc(100% - 24px));
+      margin: 0 auto 32px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .controls {
+      padding: 18px;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 220px 220px 1fr;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .input-group label {
+      margin-top: 0;
+    }
+
+    .controls h2,
+    .visual h2,
+    .teacher h2 {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+    }
+
+    .button-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 0;
+    }
+
+    button {
+      border: 0;
+      border-radius: 11px;
+      padding: 11px 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      transition: transform 0.08s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button.secondary {
+      background: #4b5563;
+    }
+
+    button.success {
+      background: var(--good);
+    }
+
+    button.warning {
+      background: var(--warn);
+    }
+
+    button.ghost {
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    .note {
+      margin-top: 14px;
+      padding: 12px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-light);
+      border-radius: 10px;
+      color: #1e3a8a;
+      font-size: 0.95rem;
+    }
+
+    .visual {
+      padding: 18px;
+      min-height: 560px;
+      overflow: hidden;
+    }
+
+    .status {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .status-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fafafa;
+    }
+
+    .status-card strong {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .status-card span {
+      font-family: "Courier New", monospace;
+      font-weight: 700;
+    }
+
+    .canvas {
+      min-height: 320px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 16px;
+      padding: 34px 18px;
+      overflow-x: auto;
+      background:
+        linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+        linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    .list-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: max-content;
+      padding: 8px;
+    }
+
+    .head-box {
+      border: 2px solid var(--head-border);
+      background: var(--head);
+      border-radius: 12px;
+      padding: 14px 16px;
+      text-align: center;
+      font-family: "Courier New", monospace;
+      font-weight: 700;
+      position: relative;
+      min-width: 86px;
+    }
+
+    .node {
+      display: flex;
+      align-items: stretch;
+      border: 3px solid var(--node-border);
+      background: var(--node-bg);
+      border-radius: 14px;
+      overflow: hidden;
+      min-width: 124px;
+      box-shadow: 0 7px 14px rgba(15, 23, 42, 0.1);
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .node.active {
+      background: var(--highlight);
+      border-color: var(--highlight-border);
+      transform: translateY(-8px);
+    }
+
+    .cell {
+      padding: 15px 12px;
+      text-align: center;
+      min-width: 58px;
+    }
+
+    .cell.info {
+      border-right: 2px solid var(--node-border);
+      font-weight: 800;
+      font-size: 1.25rem;
+    }
+
+    .cell.next {
+      font-family: "Courier New", monospace;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .arrow {
+      font-size: 2rem;
+      color: var(--accent);
+      font-weight: 800;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .null-box {
+      border: 2px solid #9ca3af;
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-family: "Courier New", monospace;
+      font-weight: 800;
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .empty-list {
+      font-size: 1.25rem;
+      font-family: "Courier New", monospace;
+      color: var(--muted);
+      padding: 16px;
+    }
+
+    .explanation {
+      margin-top: 16px;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      padding: 14px;
+      border-radius: 14px;
+    }
+
+    .explanation h3 {
+      margin: 0 0 8px;
+      color: #1e40af;
+      font-size: 1rem;
+    }
+
+    .explanation p {
+      margin: 0;
+    }
+
+    .code-box {
+      margin-top: 14px;
+      background: #111827;
+      color: #e5e7eb;
+      border-radius: 14px;
+      padding: 14px;
+      overflow-x: auto;
+      font-family: "Courier New", monospace;
+      font-size: 0.92rem;
+      white-space: pre;
+    }
+
+    .teacher {
+      grid-column: 1 / -1;
+      padding: 18px;
+    }
+
+    .teacher-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .mini-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fbfbfb;
+    }
+
+    .mini-card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .mini-card ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .mini-card li {
+      margin: 4px 0;
+    }
+
+    @media (max-width: 980px) {
+      .control-row {
+        grid-template-columns: 1fr;
+      }
+
+      .button-grid {
+        margin-top: 8px;
+      }
+
+      .status,
+      .teacher-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>VIZULIST</h1>
+    <p>
+      Vizualizator pentru lista simplu înlănțuită.
+    </p>
+  </header>
+
+  <main>
+    <section class="controls">
+      <h2>Operații</h2>
+
+      <div class="control-row">
+        <div class="input-group">
+          <label for="valueInput">Valoarea noului element</label>
+          <input id="valueInput" type="number" placeholder="ex. 12" />
+        </div>
+
+        <div class="input-group">
+          <label for="positionInput">Poziție / număr de ordine</label>
+          <input id="positionInput" type="number" min="1" placeholder="ex. 2" />
+        </div>
+
+        <div class="button-grid">
+          <button onclick="insertBeginning()">Inserare la început</button>
+          <button class="success" onclick="insertEnd()">Inserare la sfârșit</button>
+          <button class="warning" onclick="insertAfterPosition()">Inserare după o poziție dată</button>
+          <button class="ghost" onclick="traverseList()">Animarea parcurgerii</button>
+          <button class="secondary" onclick="loadExample()">Încarcă o listă exemplu</button>
+          <button class="danger" onclick="resetList()">Golește lista</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="visual">
+      <h2>Model vizual</h2>
+
+      <div class="status">
+        <div class="status-card">
+          <strong>Starea listei</strong>
+          <span id="listState">prim = NULL</span>
+        </div>
+        <div class="status-card">
+          <strong>Numărul de elemente</strong>
+          <span id="listSize">0</span>
+        </div>
+        <div class="status-card">
+          <strong>Operația curentă</strong>
+          <span id="operationState">niciuna</span>
+        </div>
+      </div>
+
+      <div class="canvas" id="canvas">
+        <div class="list-row" id="listRow"></div>
+      </div>
+
+      <div class="explanation">
+        <h3>Explicație</h3>
+        <p id="explanationText">
+          Lista este vidă. În acest caz, pointerul <code>prim</code> are valoarea <code>NULL</code>.
+        </p>
+      </div>
+
+      <div class="code-box" id="codeBox">nod *prim = NULL;</div>
+    </section>
+  </main>
+
+  <script>
+    let list = [];
+    let activeIndex = -1;
+
+    const valueInput = document.getElementById("valueInput");
+    const positionInput = document.getElementById("positionInput");
+    const listRow = document.getElementById("listRow");
+    const explanationText = document.getElementById("explanationText");
+    const codeBox = document.getElementById("codeBox");
+    const listState = document.getElementById("listState");
+    const listSize = document.getElementById("listSize");
+    const operationState = document.getElementById("operationState");
+
+    function getValue() {
+      const value = valueInput.value.trim();
+      if (value === "") {
+        alert("Introduceți o valoare pentru noul element!");
+        return null;
+      }
+      return Number(value);
+    }
+
+    function getPosition() {
+      const position = Number(positionInput.value);
+      if (!Number.isInteger(position) || position < 1) {
+        alert("Introduceți o poziție exprimată printr-un număr natural nenul!");
+        return null;
+      }
+      return position;
+    }
+
+    function render() {
+      listRow.innerHTML = "";
+
+      if (list.length === 0) {
+        listRow.innerHTML = '<div class="empty-list">prim → NULL</div>';
+        listState.textContent = "prim = NULL";
+        listSize.textContent = "0";
+        return;
+      }
+
+      const head = document.createElement("div");
+      head.className = "head-box";
+      head.textContent = "prim";
+      listRow.appendChild(head);
+
+      const headArrow = document.createElement("div");
+      headArrow.className = "arrow";
+      headArrow.textContent = "→";
+      listRow.appendChild(headArrow);
+
+      list.forEach((value, index) => {
+        const node = document.createElement("div");
+        node.className = "node" + (index === activeIndex ? " active" : "");
+        node.innerHTML = `
+          <div class="cell info">${value}</div>
+          <div class="cell next">urm</div>
+        `;
+        listRow.appendChild(node);
+
+        const arrow = document.createElement("div");
+        arrow.className = "arrow";
+        arrow.textContent = "→";
+        listRow.appendChild(arrow);
+      });
+
+      const nullBox = document.createElement("div");
+      nullBox.className = "null-box";
+      nullBox.textContent = "NULL";
+      listRow.appendChild(nullBox);
+
+      listState.textContent = "prim → primul nod";
+      listSize.textContent = String(list.length);
+    }
+
+    function setExplanation(text, code, operation) {
+      explanationText.innerHTML = text;
+      codeBox.textContent = code;
+      operationState.textContent = operation;
+    }
+
+    function clearInputs() {
+      valueInput.value = "";
+      valueInput.focus();
+    }
+
+    function insertBeginning() {
+      const value = getValue();
+      if (value === null) return;
+
+      list.unshift(value);
+      activeIndex = 0;
+      render();
+
+      setExplanation(
+        `Noul nod a fost inserat la începutul listei. Câmpul <code>urm</code> al noului nod indică vechiul prim element, apoi pointerul <code>prim</code> va indica noul nod.`,
+`void inserare_inceput(nod *&prim, int val)
+{
+    nod *nou = new nod;
+    nou->info = val;
+    nou->urm = prim;
+    prim = nou;
+}`,
+        "inserare la început"
+      );
+
+      clearInputs();
+    }
+
+    function insertEnd() {
+      const value = getValue();
+      if (value === null) return;
+
+      list.push(value);
+      activeIndex = list.length - 1;
+      render();
+
+      setExplanation(
+        `Noul nod a fost inserat la sfârșitul listei. Dacă lista era vidă, atunci <code>prim</code> indică noul nod. Dacă lista nu era vidă, câmpul <code>urm</code> al fostului ultim nod indică noul nod.`,
+`void inserare_sfarsit(nod *&prim, int val)
+{
+    nod *nou = new nod;
+    nou->info = val;
+    nou->urm = NULL;
+
+    if (prim == NULL)
+        prim = nou;
+    else {
+        nod *p = prim;
+        while (p->urm != NULL)
+            p = p->urm;
+        p->urm = nou;
+    }
+}`,
+        "inserare la sfârșit"
+      );
+
+      clearInputs();
+    }
+
+    function insertAfterPosition() {
+      const value = getValue();
+      if (value === null) return;
+
+      const position = getPosition();
+      if (position === null) return;
+
+      if (list.length === 0) {
+        alert("Lista este vidă. Inserați mai întâi cel puțin un element!");
+        return;
+      }
+
+      if (position > list.length) {
+        alert("Această poziție nu există în listă!");
+        return;
+      }
+
+      list.splice(position, 0, value);
+      activeIndex = position;
+      render();
+
+      setExplanation(
+        `Noul element a fost inserat după nodul aflat pe poziția <strong>${position}</strong>. Nodurile nu s-au deplasat, s-au modificat doar legăturile dintre ele.`,
+`void inserare_dupa(nod *element, int val)
+{
+    if (element == NULL) return;
+
+    nod *nou = new nod;
+    nou->info = val;
+    nou->urm = element->urm;
+    element->urm = nou;
+}`,
+        "inserare în interior"
+      );
+
+      clearInputs();
+    }
+
+    async function traverseList() {
+      if (list.length === 0) {
+        setExplanation(
+          `Lista este vidă, deci nu există elemente de parcurs. Pointerul <code>prim</code> are valoarea <code>NULL</code>.`,
+`void parcurgere(nod *prim)
+{
+    nod *p = prim;
+    while (p != NULL) {
+        cout << p->info << " ";
+        p = p->urm;
+    }
+}`,
+          "parcurgere"
+        );
+        return;
+      }
+
+      setExplanation(
+        `Parcurgerea pornește de la primul nod indicat de <code>prim</code>. Pointerul auxiliar înaintează pas cu pas: <code>p = p-&gt;urm</code>.`,
+`void parcurgere(nod *prim)
+{
+    nod *p = prim;
+    while (p != NULL) {
+        cout << p->info << " ";
+        p = p->urm;
+    }
+}`,
+        "parcurgere"
+      );
+
+      for (let i = 0; i < list.length; i++) {
+        activeIndex = i;
+        render();
+        await sleep(850);
+      }
+
+      activeIndex = -1;
+      render();
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function resetList() {
+      list = [];
+      activeIndex = -1;
+      render();
+      setExplanation(
+        `Lista este vidă. În acest caz, pointerul <code>prim</code> are valoarea <code>NULL</code>.`,
+`nod *prim = NULL;`,
+        "golirea listei"
+      );
+      valueInput.focus();
+    }
+
+    function loadExample() {
+      list = [7, 12, 4];
+      activeIndex = -1;
+      render();
+      setExplanation(
+        `A fost încărcată o listă exemplu. Observați că ordinea logică este dată de săgeți, nu de poziția fizică a nodurilor în memorie.`,
+`struct nod {
+    int info;
+    nod *urm;
+};
+
+nod *prim = NULL;`,
+        "listă exemplu"
+      );
+    }
+
+    render();
+  </script>
+</body>
+</html>
