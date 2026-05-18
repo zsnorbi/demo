@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Matrix Belépés</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Courier New", monospace;
+    }
+
+    body {
+      background: black;
+      color: #00ff66;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+
+    /* LOGIN */
+
+    #loginScreen {
+      position: relative;
+      z-index: 2;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      background: rgba(0,0,0,0.88);
+      border: 2px solid #00ff66;
+      padding: 40px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 0 25px #00ff66;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      letter-spacing: 4px;
+      text-shadow: 0 0 10px #00ff66;
+    }
+
+    p {
+      margin-bottom: 20px;
+      opacity: 0.8;
+    }
+
+    input {
+      width: 100%;
+      padding: 15px;
+      background: black;
+      border: 1px solid #00ff66;
+      color: #00ff66;
+      font-size: 1rem;
+      margin-bottom: 20px;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      background: #00ff66;
+      color: black;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #00cc55;
+      box-shadow: 0 0 15px #00ff66;
+    }
+
+    #message {
+      margin-top: 20px;
+      min-height: 40px;
+      color: #ff3333;
+    }
+
+    /* SYSTEM SCREEN */
+
+    #systemScreen {
+      display: none;
+      position: relative;
+      z-index: 2;
+      padding: 30px;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .terminal {
+      max-width: 1000px;
+      margin: auto;
+      background: rgba(0,0,0,0.85);
+      border: 2px solid #00ff66;
+      padding: 30px;
+      box-shadow: 0 0 25px #00ff66;
+    }
+
+    .line {
+      margin-bottom: 10px;
+      opacity: 0;
+      animation: fadeIn 0.5s forwards;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    .success {
+      color: #00ff66;
+    }
+
+    .warning {
+      color: #ffaa00;
+    }
+
+    .danger {
+      color: #ff3333;
+    }
+
+    .blink {
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="matrix"></canvas>
+
+  <!-- LOGIN -->
+  <div id="loginScreen">
+    <div class="container">
+      <h1>MATRIX TERMINÁL</h1>
+      <p>Adj meg egy hozzáférési kódot</p>
+
+      <input type="password" id="password" placeholder="Belépési kód..." />
+      <button onclick="checkPassword()">BELÉPÉS</button>
+
+      <div id="message"></div>
+    </div>
+  </div>
+
+  <!-- SYSTEM -->
+  <div id="systemScreen">
+    <div class="terminal" id="terminal"></div>
+  </div>
+
+  <script>
+    function checkPassword() {
+      const input = document.getElementById("password").value;
+      const message = document.getElementById("message");
+
+      if (input === "MATRIXMESTER") {
+
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("systemScreen").style.display = "block";
+
+        startSystemBoot();
+
+      } else {
+        message.innerHTML = "✖ Hibás kód.";
+      }
+    }
+
+    document.getElementById("password")
+      .addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          checkPassword();
+        }
+      });
+
+    // TERMINAL BOOT SEQUENCE
+
+    const terminal = document.getElementById("terminal");
+
+    const lines = [
+      "[ OK ] Kapcsolódás a Matrix főhálózathoz...",
+      "[ OK ] Titkosított csatorna létrehozva...",
+      "[ OK ] Identitás ellenőrizve...",
+      "[ OK ] Hozzáférés engedélyezve...",
+      "[ WARN ] Külső megfigyelés észlelve...",
+      "[ OK ] Sentinel rendszerek megkerülve...",
+      "[ OK ] Neuralink kapcsolat stabil...",
+      "[ ACCESS GRANTED ]",
+      "",
+      "ÜDVÖZLÜNK A MATRIX RENDSZERÉBEN",
+      "",
+      "Felhasználó: MÁTRIXMESTER",
+      "Hozzáférési szint: OMEGA",
+      "Rendszerállapot: STABIL",
+      "",
+      "A valóság csak illúzió...",
+      "",
+      "> várakozás további parancsra..."
+    ];
+
+    function startSystemBoot() {
+
+      let i = 0;
+
+      function showLine() {
+
+        if (i < lines.length) {
+
+          const div = document.createElement("div");
+          div.classList.add("line");
+
+          if (lines[i].includes("WARN")) {
+            div.classList.add("warning");
+          }
+
+          if (lines[i].includes("ACCESS")) {
+            div.classList.add("success");
+          }
+
+          div.innerHTML = lines[i];
+
+          terminal.appendChild(div);
+
+          terminal.scrollTop = terminal.scrollHeight;
+
+          i++;
+
+          setTimeout(showLine, 700);
+
+        } else {
+
+          const cursor = document.createElement("div");
+          cursor.innerHTML = '<span class="blink">█</span>';
+          terminal.appendChild(cursor);
+
+        }
+      }
+
+      showLine();
+    }
+
+    // MATRIX RAIN
+
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const chars =
+      "アイウエオカキクケコサシスセソABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const letters = chars.split("");
+
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+
+    const drops = [];
+
+    for (let i = 0; i < columns; i++) {
+      drops[i] = 1;
+    }
+
+    function draw() {
+
+      ctx.fillStyle = "rgba(0,0,0,0.08)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#00ff66";
+      ctx.font = fontSize + "px monospace";
+
+      for (let i = 0; i < drops.length; i++) {
+
+        const text =
+          letters[Math.floor(Math.random() * letters.length)];
+
+        ctx.fillText(
+          text,
+          i * fontSize,
+          drops[i] * fontSize
+        );
+
+        if (
+          drops[i] * fontSize > canvas.height &&
+          Math.random() > 0.975
+        ) {
+          drops[i] = 0;
+        }
+
+        drops[i]++;
+      }
+    }
+
+    setInterval(draw, 33);
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+  </script>
+
+</body>
+</html>
