@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interaktív beszélgetőkártyák – 10. osztály</title>
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --paper: #fffaf2;
+      --ink: #26221d;
+      --muted: #6d6256;
+      --border: #d7c5ad;
+      --accent: #7a4e2d;
+      --accent2: #efe1cf;
+      --shadow: 0 12px 30px rgba(72, 47, 26, .18);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.9), transparent 35rem),
+        linear-gradient(135deg, #f8f0e6, var(--bg));
+    }
+
+    header {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 18px 14px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.7rem, 4vw, 3rem);
+      line-height: 1.1;
+    }
+
+    p {
+      margin: 0 auto;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.45;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 18px 20px;
+    }
+
+    .toolbtn {
+      border: 2px solid var(--accent);
+      border-radius: 999px;
+      background: var(--paper);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 10px 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(72, 47, 26, .08);
+    }
+
+    .toolbtn:hover,
+    .toolbtn:focus {
+      background: var(--accent);
+      color: white;
+      outline: none;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 18px 36px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .card {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: 220px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      perspective: 1000px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .cardInner {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform .55s ease;
+    }
+
+    .card.flipped .cardInner {
+      transform: rotateY(180deg);
+    }
+
+    .face {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      backface-visibility: hidden;
+      overflow: hidden;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .front::before,
+    .back::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border: 1px dashed rgba(122, 78, 45, .35);
+      border-radius: 16px;
+      pointer-events: none;
+    }
+
+    .front {
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.95), rgba(239,225,207,.9)),
+        var(--paper);
+    }
+
+    .back {
+      transform: rotateY(180deg);
+      background:
+        linear-gradient(145deg, rgba(255,250,242,.98), rgba(255,255,255,.9)),
+        var(--paper);
+    }
+
+    .small {
+      z-index: 1;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: .86rem;
+    }
+
+    .num {
+      z-index: 1;
+      display: block;
+      color: var(--accent);
+      font-size: clamp(4.6rem, 10vw, 6.6rem);
+      font-weight: 900;
+      line-height: .95;
+      margin: 10px 0 12px;
+    }
+
+    .hint {
+      z-index: 1;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+
+    .qnum {
+      z-index: 1;
+      align-self: flex-start;
+      color: var(--accent);
+      font-weight: 900;
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+    }
+
+    .question {
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      font-weight: 800;
+      font-size: clamp(1.05rem, 2.2vw, 1.32rem);
+      line-height: 1.22;
+    }
+
+    .card:focus-visible .face {
+      outline: 4px solid rgba(122, 78, 45, .35);
+      outline-offset: 4px;
+    }
+
+    footer {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 18px 28px;
+      color: var(--muted);
+      text-align: center;
+      font-size: .95rem;
+    }
+
+    @media (max-width: 460px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .card {
+        height: 185px;
+      }
+      .face {
+        padding: 12px;
+        border-radius: 18px;
+      }
+      .front::before,
+      .back::before {
+        inset: 8px;
+      }
+      .question {
+        font-size: .96rem;
+        line-height: 1.18;
+      }
+      .hint {
+        font-size: .78rem;
+      }
+    }
+
+    @media print {
+      .toolbar, footer {
+        display: none;
+      }
+      body {
+        background: white;
+      }
+      .grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .card {
+        height: 190px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .face {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Beszélgetőkártyák</h1>
+    <p>10. osztály – évzáró beszélgetős óra. Kattints vagy bökj rá egy kártyára: a szám megfordul, és megjelenik a kérdés.</p>
+  </header>
+
+  <section class="toolbar" aria-label="Vezérlőgombok">
+    <button class="toolbtn" type="button" id="shuffleBtn">Kártyák keverése</button>
+    <button class="toolbtn" type="button" id="resetBtn">Összes visszafordítása</button>
+  </section>
+
+  <main>
+    <section class="grid" id="cardGrid" aria-label="Beszélgetőkártyák">
+      <button class="card" type="button" data-number="1" aria-label="1. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">1</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">1.</span>
+            <span class="question">Mi volt az idei tanév legjobb pillanata számodra?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="2" aria-label="2. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">2</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">2.</span>
+            <span class="question">Melyik volt az a nap vagy esemény, amire szívesen emlékszel vissza?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="3" aria-label="3. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">3</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">3.</span>
+            <span class="question">Mi volt az idei év legviccesebb osztálypillanata?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="4" aria-label="4. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">4</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">4.</span>
+            <span class="question">Melyik tantárgy lepett meg pozitívan ebben az évben?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="5" aria-label="5. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">5</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">5.</span>
+            <span class="question">Mi volt az a dolog, amitől eleinte tartottál, de végül jól sikerült?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="6" aria-label="6. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">6</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">6.</span>
+            <span class="question">Mire vagy büszke magaddal kapcsolatban ebből a tanévből?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="7" aria-label="7. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">7</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">7.</span>
+            <span class="question">Mi volt a legnagyobb kihívás számodra idén?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="8" aria-label="8. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">8</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">8.</span>
+            <span class="question">Mi segített, amikor fáradt vagy motiválatlan voltál?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="9" aria-label="9. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">9</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">9.</span>
+            <span class="question">Mi az, amit idén megtanultál magadról?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="10" aria-label="10. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">10</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">10.</span>
+            <span class="question">Milyen tanácsot adnál most egy kilencedikes diáknak?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="11" aria-label="11. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">11</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">11.</span>
+            <span class="question">Mi az, amit jövőre másképp szeretnél csinálni?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="12" aria-label="12. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">12</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">12.</span>
+            <span class="question">Mi az, amit jövőre mindenképpen szeretnél folytatni?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="13" aria-label="13. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">13</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">13.</span>
+            <span class="question">Mi volt az idei év legnagyobb meglepetése?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="14" aria-label="14. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">14</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">14.</span>
+            <span class="question">Ki vagy mi inspirált téged ebben a tanévben?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="15" aria-label="15. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">15</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">15.</span>
+            <span class="question">Mi az, amit szerinted a tanárok nem mindig vesznek észre a diákok életéből?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="16" aria-label="16. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">16</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">16.</span>
+            <span class="question">Mitől lesz szerinted jó egy osztályközösség?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="17" aria-label="17. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">17</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">17.</span>
+            <span class="question">Mi az, amit értékelsz ebben az osztályban?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="18" aria-label="18. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">18</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">18.</span>
+            <span class="question">Milyen pillanatokban érezted azt, hogy jó ehhez az osztályhoz tartozni?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="19" aria-label="19. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">19</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">19.</span>
+            <span class="question">Mi az, amiben szerinted sokat fejlődött az osztály az év során?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="20" aria-label="20. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">20</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">20.</span>
+            <span class="question">Mi az, amin szerinted még javíthatna az osztály jövőre?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="21" aria-label="21. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">21</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">21.</span>
+            <span class="question">Mi volt az a mondat, tanács vagy gondolat, ami megmaradt benned idén?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="22" aria-label="22. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">22</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">22.</span>
+            <span class="question">Ha három szóval kellene jellemezned ezt a tanévet, melyik három lenne az?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="23" aria-label="23. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">23</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">23.</span>
+            <span class="question">Ha az idei tanév egy film lenne, mi lenne a címe?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="24" aria-label="24. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">24</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">24.</span>
+            <span class="question">Melyik volt az a tananyag, téma vagy óra, ami valamiért emlékezetes maradt?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="25" aria-label="25. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">25</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">25.</span>
+            <span class="question">Mi az, amit szívesen elfelejtenél ebből az évből?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="26" aria-label="26. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">26</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">26.</span>
+            <span class="question">Mi az, amit semmiképpen sem szeretnél elfelejteni?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="27" aria-label="27. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">27</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">27.</span>
+            <span class="question">Mit vársz legjobban a nyártól?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="28" aria-label="28. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">28</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">28.</span>
+            <span class="question">Mi az, amit szeretnél kipróbálni vagy megtenni a nyáron?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="29" aria-label="29. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">29</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">29.</span>
+            <span class="question">Milyen célod van a következő tanévre?</span>
+          </span>
+        </span>
+      </button>
+      <button class="card" type="button" data-number="30" aria-label="30. beszélgetőkártya">
+        <span class="cardInner">
+          <span class="face front">
+            <span class="small">Kártya</span>
+            <span class="num">30</span>
+            <span class="hint">Kattints / bökj rá</span>
+          </span>
+          <span class="face back">
+            <span class="qnum">30.</span>
+            <span class="question">Mit üzennél a szeptemberi önmagadnak?</span>
+          </span>
+        </span>
+      </button>
+    </section>
+  </main>
+
+  <footer>
+    Tipp: projektoron is használható, de telefonon/tableten is működik. Szóközzel vagy Enterrel is megfordítható a fókuszban lévő kártya.
+  </footer>
+
+  <script>
+    (function () {
+      var grid = document.getElementById('cardGrid');
+      var shuffleBtn = document.getElementById('shuffleBtn');
+      var resetBtn = document.getElementById('resetBtn');
+
+      function getCards() {
+        return Array.prototype.slice.call(grid.querySelectorAll('.card'));
+      }
+
+      function toggleCard(card) {
+        card.classList.toggle('flipped');
+        var number = card.getAttribute('data-number');
+        var isFlipped = card.classList.contains('flipped');
+        card.setAttribute('aria-label', isFlipped
+          ? number + '. kártya kérdése megnyitva'
+          : number + '. beszélgetőkártya');
+      }
+
+      grid.addEventListener('click', function (event) {
+        var card = event.target.closest('.card');
+        if (!card || !grid.contains(card)) return;
+        toggleCard(card);
+      });
+
+      grid.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        var card = event.target.closest('.card');
+        if (!card || !grid.contains(card)) return;
+        event.preventDefault();
+        toggleCard(card);
+      });
+
+      resetBtn.addEventListener('click', function () {
+        getCards().forEach(function (card) {
+          card.classList.remove('flipped');
+          card.setAttribute('aria-label', card.getAttribute('data-number') + '. beszélgetőkártya');
+        });
+      });
+
+      shuffleBtn.addEventListener('click', function () {
+        var cards = getCards();
+        for (var i = cards.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var temp = cards[i];
+          cards[i] = cards[j];
+          cards[j] = temp;
+        }
+        cards.forEach(function (card) {
+          card.classList.remove('flipped');
+          grid.appendChild(card);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
